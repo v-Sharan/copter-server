@@ -17,7 +17,6 @@ tmp/
 .vscode/
 __pycache__/
 skybrush.cfg
-app.py
 
 cuav-master/
 # siyi_sdk/
@@ -29,3 +28,4 @@ timestrap.py
 vid.py
 timetolatlon.py
 log/
+timetolat.py
