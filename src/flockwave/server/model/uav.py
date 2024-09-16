@@ -66,39 +66,16 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
             "minimum": -900000000,
             "maximum": 900000000,
         }
-        missioncount = {
-            "title": "Mission Count",
-            "description": "Mission Count of a UAV",
-            "type": "int",
-            "minimum": -1,
-            "maximum": 900000000,
-        }
-        misson = {
-            "title": "Auto Mission Data",
-            "description": "Mission of a UAV",
-            "type": "array",
-            "items": [
-                {
-                    "title": "Latitude",
-                    "description": "Latitude, in 1e-7 degrees",
-                    "type": "integer",
-                    "minimum": -900000000,
-                    "maximum": 900000000,
-                },
-                {
-                    "title": "Longitude",
-                    "description": "Longitude, in 1e-7 degrees",
-                    "type": "integer",
-                    "minimum": -1800000000,
-                    "maximum": 1800000000,
-                },
-            ],
+        gimbalHeading = {
+            "title": "gimbalHeading",
+            "description": "gimbalHeading of a UAV",
+            "type": "float",
+            "minimum": 0.0,
+            "maximum": 360.0,
         }
         schema = get_complex_object_schema("uavStatusInfo")
         schema["properties"]["airspeed"] = airspeed
-        schema["properties"]["mission"] = misson
-        schema["properties"]["missioncount"] = missioncount
-
+        schema["properties"]["gimbalHeading"] = gimbalHeading
         mappers = {"heading": scaled_by(10), "debug": as_base64}
 
     debug: bytes
@@ -118,8 +95,7 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
     airspeed: float
     time: int
     bootms: int
-    mission: list[float, float]
-    missioncount: int
+    gimbalHeading: float
 
     def __init__(
         self, id: Optional[str] = None, timestamp: Optional[TimestampLike] = None
@@ -149,8 +125,7 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
         self.battery = BatteryInfo()
         self.rssi = []
         self.airspeed = 0
-        self.mission = []
-        self.missioncount = 0
+        self.gimbalHeading = 0.0
 
     @property
     def position_xyz(self) -> Optional[PositionXYZ]:
@@ -235,7 +210,9 @@ class UAVBase(UAV):
             "09": "192.168.6.219",
             "10": "192.168.6.220",
         }
-        self._gimabl = Gimbal(_gimbal_ip.get(id))
+        self._gimabl = Gimbal(
+            host=_gimbal_ip.get(id), port=2000, position=self._status.position
+        )
         self._initialize_device_tree_node(self._device_tree_node)
 
     @property
@@ -412,8 +389,6 @@ class UAVBase(UAV):
         airspeed: Optional[float] = None,
         time: Optional[int] = None,
         bootms: Optional[int] = None,
-        mission: Optional[Union[list[float, float]]] = None,
-        missioncount: Optional[int] = None,
     ):
         """Updates the status information of the UAV.
 
@@ -447,12 +422,10 @@ class UAVBase(UAV):
             rssi: the measured RSSI values for each of the channels the UAV is
                 accessible on.
         """
+        if self._gimabl.bearing is not None:
+            self._status.gimbalHeading = self._gimabl.bearing
         if airspeed is not None:
             self._status.airspeed = airspeed
-        if mission is not None and len(mission) > 0:
-            self._status.mission.append(mission)
-        if missioncount is not None:
-            self._status.missioncount = missioncount
         if time is not None:
             self._status.time = time
         if bootms is not None:

@@ -103,11 +103,11 @@ def convert_to_missioncmd(
     return points_mission
 
 
-async def main(uavs: list[UAV]) -> None:
+async def main(uavs: List[UAV]) -> None:
     index = 0
     alt = 100
     for uav in uavs:
         if uav:
             await add_mavlink_mission(index, alt, uav)
             index += 1
-            # alt += 25
+            alt += 25

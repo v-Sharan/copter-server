@@ -1555,16 +1555,7 @@ class MAVLinkUAV(UAVBase):
 
     def handle_vfr_hud(self, message: MAVLinkMessage):
         self.update_status(airspeed=message.airspeed)
-
-    def handle_mission_item(self, message: MAVLinkMessage):
-        print(message)
-        # if message.x != 0.0 and message.y != 0.0:
-        # print(message.x, message.y)
-
-    def handle_mission_count(self, message: MAVLinkMessage):
-
-        self.update_status(missioncount=message.count)
-
+        
     def handle_message_drone_show_status(self, message: MAVLinkMessage):
         """Handles an incoming drone show specific status message targeted at
         this UAV.

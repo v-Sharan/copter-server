@@ -1,17 +1,25 @@
-import binascii, socket, time, threading, math
+import binascii, socket, time, math, threading
+from functools import lru_cache
+from flockwave.gps.vectors import GPSCoordinate
 
 
 class Gimbal:
+    host: str
+    port: int
+    position: GPSCoordinate
 
-    def __init__(self, host: str, port: int = 2000) -> None:
+    def __init__(
+        self, host="192.168.6.121", port=2000, position=GPSCoordinate()
+    ) -> None:
         self.host = "192.168.6.121"
         self.port = port
-        self.tlat = 0
-        self.tlon = 0
+        self.tlat = -35.3663932
+        self.tlon = 149.1625786
         self.connected = False
+        self.position = position
+        self.bearing = 0
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self.connect_to_gimbal()
-        # threading.Thread(target=self.calculate_coords, daemon=True).start()
+        threading.Thread(target=self.get_gps_bearing_loop, daemon=True).start()
 
     def calculate_coords(self):
         while self.connected:
@@ -19,7 +27,7 @@ class Gimbal:
             print(data)
             self.get_latlon(data)
 
-    def is_connected(self) -> None:
+    def is_connected(self) -> bool:
         try:
             self.socket.send(b"")
         except socket.error:
@@ -36,6 +44,17 @@ class Gimbal:
             print(f"Connection failed: {e}")
             self.connected = False
 
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def hex_to_signed_int(hex_str: str) -> int:
+        """
+        Converts a little-endian hexadecimal string to a signed integer.
+        """
+        value = int(hex_str, 16)
+        if value >= 2 ** (len(hex_str) * 4 - 1):
+            value -= 2 ** (len(hex_str) * 4)
+        return value
+
     def extract_imu_angle(self, data: str) -> tuple | None:
         """
         Extracts and calculates the IMU angles from the provided data string.
@@ -48,15 +67,6 @@ class Gimbal:
 
             return tlat * 10 * -7, tlon * 10 * -7
 
-    def hex_to_signed_int(hex_str: str) -> int:
-        """
-        Converts a little-endian hexadecimal string to a signed integer.
-        """
-        value = int(hex_str, 16)
-        if value >= 2 ** (len(hex_str) * 4 - 1):
-            value -= 2 ** (len(hex_str) * 4)
-        return value
-
     def get_latlon(self, data_1) -> tuple:
         response_hex = binascii.hexlify(data_1).decode("utf-8")
         tlat, tlon = 0, 0
@@ -64,17 +74,29 @@ class Gimbal:
             tlat, tlon = self.extract_imu_angle(response_hex)
         self.tlat = tlat
         self.tlon = tlon
+        self.get_gps_bearing()  # Recalculate bearing
 
     def get_target_coords(self) -> tuple:
         return self.tlat, self.tlon
 
-    def get_gps_bearing(self, homeLattitude, homeLongitude):
-        destinationLattitude = self.tlat
-        destinationLongitude = self.tlon
-        rlat1 = homeLattitude * (math.pi / 180)
-        rlat2 = destinationLattitude * (math.pi / 180)
-        rlon1 = homeLongitude * (math.pi / 180)
-        rlon2 = destinationLongitude * (math.pi / 180)
+    def get_gps_bearing_loop(self) -> None:
+        while True:
+            self.bearing = self.get_gps_bearing(
+                self.position.lat, self.position.lon, self.tlat, self.tlon
+            )
+            time.sleep(0.5)  # Reduce the frequency of recalculations
+
+    @lru_cache(maxsize=None)
+    def get_gps_bearing(
+        self, lat1: float, lon1: float, lat2: float, lon2: float
+    ) -> float:
+        """
+        Calculate and cache the GPS bearing based on coordinates.
+        """
+        rlat1 = lat1 * (math.pi / 180)
+        rlat2 = lat2 * (math.pi / 180)
+        rlon1 = lon1 * (math.pi / 180)
+        rlon2 = lon2 * (math.pi / 180)
 
         # formula for bearing
         y = math.sin(rlon2 - rlon1) * math.cos(rlat2)
@@ -82,5 +104,5 @@ class Gimbal:
             rlat2
         ) * math.cos(rlon2 - rlon1)
         bearing = math.atan2(y, x)  # bearing in radians
-        bearingDegrees = bearing * (180 / math.pi)
-        return bearingDegrees
+        bearing_degrees = bearing * (180 / math.pi)
+        return bearing_degrees

@@ -807,22 +807,6 @@ class MAVLinkNetwork:
         if uav:
             uav.handle_vfr_hud(message)
 
-    def _mission_item(
-        self, message: MAVLinkMessage, *, connection_id: str, address: Any
-    ):
-        # uav = self._find_uav_from_message(message, address)
-        print(message)
-        # if uav:
-        #     uav.handle_mission_item(message)
-
-    def _mission_count(
-        self, message: MAVLinkMessage, *, connection_id: str, address: Any
-    ):
-        uav = self._find_uav_from_message(message, address)
-
-        if uav:
-            uav.handle_mission_count(message)
-
     def _handle_message_data16(
         self, message: MAVLinkMessage, *, connection_id: str, address: Any
     ):

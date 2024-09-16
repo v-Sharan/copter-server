@@ -3,7 +3,7 @@
 from appdirs import AppDirs
 from collections import defaultdict
 from inspect import isawaitable, isasyncgen
-from os import environ, listdir, path
+from os import environ
 from trio import (
     BrokenResourceError,
     move_on_after,
@@ -59,13 +59,7 @@ from .registries import (
 )
 from .version import __version__ as server_version
 from .swarm import *
-
-# from .socket.globalVariable import (
-#     get_logCounter,
-#     update_log_file_path,
-#     update_logCounter,
-# )
-
+import math
 from flockwave.server.ext.mavlink.automission import AutoMissionManager
 
 
@@ -826,7 +820,9 @@ class SkybrushServer(DaemonApp):
             uav = self.find_uav_by_id(uavid)
             if uav:
                 await uav.driver._send_guided_mode_single(uav)
-                target = GPSCoordinate(lat=lat, lon=lon, ahl=uav.status.position.ahl)
+                target = GPSCoordinate(
+                    lat=lat, lon=lon, ahl=math.ceil(uav.status.position.ahl)
+                )
                 result = await uav.driver._send_fly_to_target_signal_single(uav, target)
             result = True
 
@@ -933,26 +929,6 @@ class SkybrushServer(DaemonApp):
         parameters = dict(message.body)
         result = ""
         msg = parameters["message"].lower()
-        # vehicle, csv_file_path, altitude
-
-        if msg == "sparedrones":
-            from .spareDrone.spareDrone import adds_square_mission
-
-            data = [
-                {
-                    "mission": int(parameters.pop("mission")),
-                    "uav": int(parameters.pop("uav")),
-                    "alt": int(parameters.pop("alt")),
-                }
-            ]
-            # fields = ["mission", "uav", "alt"]
-            adds_square_mission(
-                data[0]["mission"],
-                data[0]["uav"],
-                data[0]["alt"],
-            )
-
-            result = True
 
         if msg == "master":
             result = master(int(parameters["uav"]))
