@@ -687,12 +687,12 @@ class MAVLinkNetwork:
             "MAG_CAL_REPORT": self._handle_message_mag_cal_report,
             "MEMINFO": nop,
             "MISSION_ACK": nop,  # used for mission and geofence download / upload
-            "MISSION_COUNT": self._mission_count,  # used for mission and geofence download / upload
+            "MISSION_COUNT": nop,  # used for mission and geofence download / upload
             "MISSION_CURRENT": nop,  # maybe later?
             "MISSION_ITEM_INT": nop,  # used for mission and geofence download / upload
             "MISSION_REQUEST": nop,  # used for mission and geofence download / upload
             "MISSION_REQUEST_INT": nop,  # used for mission and geofence download / upload
-            "MISSION_ITEM": self._mission_item,  # used for mission and geofence download / upload
+            "MISSION_ITEM": nop,  # used for mission and geofence download / upload
             "NAV_CONTROLLER_OUTPUT": nop,
             "PARAM_VALUE": nop,
             "POSITION_TARGET_GLOBAL_INT": nop,
@@ -703,7 +703,6 @@ class MAVLinkNetwork:
             "TIMESYNC": self._handle_message_timesync,
             "V2_EXTENSION": self._handle_message_v2_extension,
             "VFR_HUD": self._vfr_hud,
-            "MISSION_STATE": self._mission_item,
         }
 
         autopilot_component_id = MAVComponent.AUTOPILOT1
