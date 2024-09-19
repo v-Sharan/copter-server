@@ -81,5 +81,5 @@ async def Dynamic_main(uavs: list[UAV]) -> bool:
             time.sleep(0.5)
             await add_mavlink_mission(index, alt, uav)
             index += 1
-            # alt += 25
+            alt += 10
     return True

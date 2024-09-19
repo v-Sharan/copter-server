@@ -114,7 +114,6 @@ class AutoMissionManager:
 
         num_items = len(items)
         mission_type = MAVMissionType.MISSION
-        print("number of items", num_items)
 
         index, finished = None, False
         while not finished:

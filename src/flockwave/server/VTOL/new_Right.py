@@ -143,10 +143,22 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     y = -120
 
     lat_lons = [[] for _ in range(len(uavs))]
-
     prev_bearing = abs(
         gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
     )
+
+    if prev_bearing >= -30 and prev_bearing <= 30:
+        x = -60
+        y = 0
+    elif prev_bearing >= -210 and prev_bearing <= -150:
+        x = 60
+        y = 0
+    elif prev_bearing >= -125 and prev_bearing <= -50:
+        x = 60
+        y = 0
+    elif prev_bearing >= 50 and prev_bearing <= 125:
+        x = 0
+        y = 60
 
     flag = 0
 

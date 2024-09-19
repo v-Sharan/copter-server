@@ -765,7 +765,6 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_fly_to_target_signal_single(
         self, uav: "MAVLinkUAV", target: GPSCoordinate
     ) -> None:
-        print(target)
         await uav.fly_to(target)
 
     async def _send_mission_download_signal_single(self, uav: "MAVLinkUAV") -> None:

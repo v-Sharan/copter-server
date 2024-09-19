@@ -1,9 +1,7 @@
 import math
 from scipy import interpolate
-import simplekml
 import xml.etree.ElementTree as ET
 import csv
-import os
 import math
 from scipy import interpolate
 from .mission_basic_1 import main as MB
@@ -55,28 +53,6 @@ def gps_bearing(
     bearingDegrees = bearing * (180 / math.pi)
     out = [distance, bearingDegrees]
     return out
-
-
-def extract_data_from_kml(kml_file_path):
-    # Open the KML file
-    kml = simplekml.Kml()
-    kml.open(kml_file_path)
-
-    # Access features in the KML file
-    for feature in kml.features():
-        # Check if the feature is a placemark
-        if isinstance(feature, simplekml.Placemark):
-            placemark = feature
-            # Extract placemark data
-            name = placemark.name
-            description = placemark.description
-            coordinates = (
-                placemark.geometry.coords
-            )  # Coordinates in (longitude, latitude) format
-            print("Name:", name)
-            print("Description:", description)
-            print("Coordinates:", coordinates)
-            print("----------------------------------")
 
 
 def kml_read(kml_file_path):
@@ -161,9 +137,24 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     x = -60
     y = -60
 
+    lat_lons = [[] for _ in range(len(uavs))]
+
     prev_bearing = abs(
         gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
     )
+
+    if prev_bearing >= -30 and prev_bearing <= 30:
+        x = -60
+        y = 0
+    elif prev_bearing >= -210 and prev_bearing <= -150:
+        x = 60
+        y = 0
+    elif prev_bearing >= -125 and prev_bearing <= -50:
+        x = 60
+        y = 0
+    elif prev_bearing >= 50 and prev_bearing <= 125:
+        x = 0
+        y = 60
 
     for index in range(len(result) - 1):
         bearing = gps_bearing(
@@ -238,8 +229,6 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
             y = 60
         prev_bearing = bearing
         res = generate_XY_Positions(numOfDrones, x, y, result[index])
-
-        lat_lons = [[] for _ in range(len(res))]
 
         for i in range(len(res)):
             lat_lons[i].append(res[i])

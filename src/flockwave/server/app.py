@@ -1596,7 +1596,6 @@ class SkybrushServer(DaemonApp):
         # Process the configuration options
         cfg = config.get("COMMAND_EXECUTION_MANAGER", {})
         self.command_execution_manager.timeout = cfg.get("timeout", 90)
-
         # Override the base port if needed
         port_from_env: Optional[str] = environ.get("PORT")
         port: Optional[int] = config.get("PORT")

@@ -1,9 +1,19 @@
 import binascii, socket, time, math, threading
 from functools import lru_cache
 from flockwave.gps.vectors import GPSCoordinate
+from typing import Self
 
 
 class Gimbal:
+    """
+    Class for Gimbal Connection and Calculation
+
+    params:
+        host: string | None
+        port: int | None
+        postion: GPScoordinate
+    """
+
     host: str
     port: int
     position: GPSCoordinate
@@ -21,20 +31,23 @@ class Gimbal:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         threading.Thread(target=self.get_gps_bearing_loop, daemon=True).start()
 
-    def calculate_coords(self):
+    def calculate_coords(self: Self) -> None:
         while self.connected:
+            if not self.is_connected():
+                break
             data, address = self.socket.recvfrom(1024)
-            print(data)
             self.get_latlon(data)
 
-    def is_connected(self) -> bool:
+    def is_connected(self: Self) -> bool:
         try:
             self.socket.send(b"")
+            self.connected = True
         except socket.error:
+            self.connected = False
             return False
         return True
 
-    def connect_to_gimbal(self) -> None:
+    def connect_to_gimbal(self: Self) -> None:
         try:
             self.socket.connect((self.host, self.port))
             time.sleep(2)
@@ -46,7 +59,7 @@ class Gimbal:
 
     @staticmethod
     @lru_cache(maxsize=None)
-    def hex_to_signed_int(hex_str: str) -> int:
+    def hex_to_signed_int(self: Self, hex_str: str) -> int:
         """
         Converts a little-endian hexadecimal string to a signed integer.
         """
@@ -55,44 +68,51 @@ class Gimbal:
             value -= 2 ** (len(hex_str) * 4)
         return value
 
-    def extract_imu_angle(self, data: str) -> tuple | None:
+    def extract_imu_angle(self: Self, data: str) -> tuple[float | int]:
         """
         Extracts and calculates the IMU angles from the provided data string.
         """
-        if len(data) == 94:
-            tlat = data[34:42]
-            tlon = data[42:50]
-            tlat = self.hex_to_signed_int(tlat)
-            tlon = self.hex_to_signed_int(tlon)
+        if len(data) != 94:
+            return 0, 0
 
-            return tlat * 10 * -7, tlon * 10 * -7
+        tlat = data[34:42]
+        tlon = data[42:50]
+        tlat = self.hex_to_signed_int(tlat)
+        tlon = self.hex_to_signed_int(tlon)
 
-    def get_latlon(self, data_1) -> tuple:
+        return tlat * 10 * -7, tlon * 10 * -7
+
+    def get_latlon(self: Self, data_1: bytes) -> tuple:
         response_hex = binascii.hexlify(data_1).decode("utf-8")
         tlat, tlon = 0, 0
         if len(response_hex) == 94:
             tlat, tlon = self.extract_imu_angle(response_hex)
         self.tlat = tlat
         self.tlon = tlon
-        self.get_gps_bearing()  # Recalculate bearing
 
-    def get_target_coords(self) -> tuple:
+    def get_target_coords(self: Self) -> tuple:
+        """
+        Returns the Target Latitude and Longitude of the Gimbal.
+        """
         return self.tlat, self.tlon
 
-    def get_gps_bearing_loop(self) -> None:
-        while True:
-            self.bearing = self.get_gps_bearing(
-                self.position.lat, self.position.lon, self.tlat, self.tlon
-            )
+    def get_gps_bearing_loop(self: Self) -> None:
+        """
+        Calculate the GPS bearing with every 0.5sec.
+        """
+        while self.connected:
+            self.bearing = self.get_gps_bearing()
             time.sleep(0.5)  # Reduce the frequency of recalculations
 
     @lru_cache(maxsize=None)
-    def get_gps_bearing(
-        self, lat1: float, lon1: float, lat2: float, lon2: float
-    ) -> float:
+    def get_gps_bearing(self: Self) -> float:
         """
         Calculate and cache the GPS bearing based on coordinates.
         """
+        lat1 = self.position.lat
+        lon1 = self.position.lon
+        lat2 = self.tlat
+        lon2 = self.tlon
         rlat1 = lat1 * (math.pi / 180)
         rlat2 = lat2 * (math.pi / 180)
         rlon1 = lon1 * (math.pi / 180)
