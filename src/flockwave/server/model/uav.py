@@ -210,9 +210,7 @@ class UAVBase(UAV):
             "09": "192.168.6.219",
             "10": "192.168.6.220",
         }
-        self._gimabl = Gimbal(
-            host=_gimbal_ip.get(id), port=2000, position=self._status.position
-        )
+        self._gimabl = Gimbal(port=2000, position=self._status.position)
         self._initialize_device_tree_node(self._device_tree_node)
 
     @property
@@ -1623,6 +1621,31 @@ class UAVDriver(Generic[TUAV], metaclass=ABCMeta):
         raise NotImplementedError
 
     def _send_guided_mode_single(
+        self, uav: TUAV, *, transport: Optional[TransportOptions] = None
+    ) -> None:
+        """Asks the driver to send a return-to-home signal to a single UAV
+        managed by this driver.
+
+        May return an awaitable if sending the signal takes a longer time.
+
+        The function follows the "samurai principle", i.e. "return victorious,
+        or not at all". It means that if it returns, the operation succeeded.
+        Raise an exception if the operation cannot be executed for any reason;
+        a RuntimeError is typically sufficient.
+
+        Parameters:
+            uav: the UAV to address with this request.
+            transport: transport options for sending the signal
+
+        Raises:
+            NotImplementedError: if the operation is not supported by the
+                driver yet, but there are plans to implement it
+            NotSupportedError: if the operation is not supported by the
+                driver and will not be supported in the future either
+        """
+        raise NotImplementedError
+
+    def _send_auto_mode_single(
         self, uav: TUAV, *, transport: Optional[TransportOptions] = None
     ) -> None:
         """Asks the driver to send a return-to-home signal to a single UAV

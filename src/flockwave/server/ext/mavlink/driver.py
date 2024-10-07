@@ -765,6 +765,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_fly_to_target_signal_single(
         self, uav: "MAVLinkUAV", target: GPSCoordinate
     ) -> None:
+        await uav.driver._send_guided_mode_single(uav)
         await uav.fly_to(target)
 
     async def _send_mission_download_signal_single(self, uav: "MAVLinkUAV") -> None:
@@ -1554,7 +1555,7 @@ class MAVLinkUAV(UAVBase):
 
     def handle_vfr_hud(self, message: MAVLinkMessage):
         self.update_status(airspeed=message.airspeed)
-        
+
     def handle_message_drone_show_status(self, message: MAVLinkMessage):
         """Handles an incoming drone show specific status message targeted at
         this UAV.

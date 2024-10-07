@@ -6,6 +6,7 @@ import math
 from scipy import interpolate
 from .mission_basic_1 import main as MB
 from flockwave.server.model import UAV
+from flockwave.server.socket.globalVariable import drone
 
 
 def destination_location(
@@ -133,6 +134,7 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     result = kml_read(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml"
     )
+    drone_id = drone
 
     numOfDrones = Drones
 
@@ -142,7 +144,7 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     x = 0
     y = -120
 
-    lat_lons = [[] for _ in range(len(uavs))]
+    lat_lons = [[] for _ in range(20)]
     prev_bearing = abs(
         gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
     )
@@ -258,10 +260,11 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
         lat_lons[i].append(res[i])
 
     for i in range(numOfDrones):
+        uav_id = int(drone_id[i + 1])
         with open(
-            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-"
-            + str(i + 1)
-            + ".csv",
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
+                uav_id
+            ),
             "w",
             newline="",
         ) as f:
@@ -270,10 +273,11 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
                 csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
 
     for i in range(numOfDrones):
+        uav_id = int(drone_id[i + 1])
         with open(
-            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-"
-            + str(i + 1)
-            + ".csv",
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-{}.csv".format(
+                uav_id
+            ),
             "w",
             newline="",
         ) as f:

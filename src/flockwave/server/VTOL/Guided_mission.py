@@ -7,7 +7,7 @@ def destination_location(
     homeLongitude: float,
     distance: float | int,
     bearing: float | int,
-) -> List[float, float]:
+) -> List[float]:
     R = 6371e3  # Radius of earth in metres
     rlat1 = homeLattitude * (math.pi / 180)
     rlon1 = homeLongitude * (math.pi / 180)
@@ -27,15 +27,12 @@ def destination_location(
     return location
 
 
-def Guided_Mission(t_lat: float, t_lon: float) -> List[List[float, float]]:
+def Guided_Mission(t_lat: float, t_lon: float) -> List[List[float]]:
     lat_lon1 = destination_location(t_lat, t_lon, float(500), float(-90))
     lat1, lon1 = lat_lon1[0], lat_lon1[1]
     lat_lon2 = destination_location(t_lat, t_lon, float(500), float(90))
     lat2, lon2 = lat_lon2[0], lat_lon2[1]
 
-    result = []
-
-    result.append([lat1, lon1])
-    result.append([lat2, lon2])
+    result = [[lat1, lon1], [t_lat, t_lon], [lat2, lon2]]
 
     return result

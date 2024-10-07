@@ -4,10 +4,7 @@ from appdirs import AppDirs
 from collections import defaultdict
 from inspect import isawaitable, isasyncgen
 from os import environ
-from trio import (
-    BrokenResourceError,
-    move_on_after,
-)
+from trio import BrokenResourceError, move_on_after
 from typing import (
     Any,
     Iterable,
@@ -59,34 +56,12 @@ from .registries import (
 )
 from .version import __version__ as server_version
 from .swarm import *
-import math
 from flockwave.server.ext.mavlink.automission import AutoMissionManager
 
 
 __all__ = ("app",)
 
 PACKAGE_NAME = __name__.rpartition(".")[0]
-
-
-# if get_logCounter() == 0:
-#     sample_name = "log_"
-#     folder_path = "C:/Users/vshar/OneDrive/Documents/mspace-server/log"
-#     log_list = listdir(folder_path)
-#     num_log = len(log_list) + 1
-#     file_name = sample_name+str(num_log)+str(".txt")
-#     file_path = path.join(folder_path,file_name)
-#     update_log_file_path(file_path)
-#     try:
-#         # Try to open the file in exclusive creation mode ('x')
-#         with open(file_path, 'x') as file:
-#             # If the file doesn't exist, it will be created
-#             print(f"File created: {file_path}")
-#         update_logCounter()
-#     except FileExistsError:
-#         # If the file already exists, print a message
-#         print(f"File already exists: {file_path}")
-
-# threading.Thread(target=run_socket,daemon=True).start()
 
 #: Table that describes the handlers of several UAV-related command requests
 UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec]] = {
@@ -603,37 +578,37 @@ class SkybrushServer(DaemonApp):
 
         return response
 
-    async def camera_actions(
-        self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
-    ) -> FlockwaveMessage:
-        response = self.message_hub.create_response_or_notification(
-            body={}, in_response_to=message
-        )
-        parameters = dict(message.body)
-        msg = parameters["message"].lower()
+    # async def camera_actions(
+    #     self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
+    # ) -> FlockwaveMessage:
+    #     response = self.message_hub.create_response_or_notification(
+    #         body={}, in_response_to=message
+    #     )
+    #     parameters = dict(message.body)
+    #     msg = parameters["message"].lower()
 
-        if msg == "start_capture":
-            from .cameraActions import start_or_stop
+    #     if msg == "start_capture":
+    #         from .cameraActions import start_or_stop
 
-            data = await start_or_stop("start")
+    #         data = await start_or_stop("start")
 
-        if msg == "stop_capture":
-            from .cameraActions import start_or_stop
+    #     if msg == "stop_capture":
+    #         from .cameraActions import start_or_stop
 
-            data = await start_or_stop("stop")
+    #         data = await start_or_stop("stop")
 
-        if msg == "connect":
-            from .cameraActions import connect
+    #     if msg == "connect":
+    #         from .cameraActions import connect
 
-            data = await connect()
+    #         data = await connect()
 
-        if msg == "test":
-            from .cameraActions import test_single
+    #     if msg == "test":
+    #         from .cameraActions import test_single
 
-            data = await test_single()
+    #         data = await test_single()
 
-        response.body["message"] = data
-        return response
+    #     response.body["message"] = data
+    #     return response
 
     async def home_save(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
@@ -803,6 +778,28 @@ class SkybrushServer(DaemonApp):
         num = format(c_sum % 256, "X").zfill(2)
         return str(num)
 
+    async def simple_go_to(self, target: list[float], uav: UAV):
+        from .VTOL import gps_bearing
+        import trio
+
+        for i, point in enumerate(target):
+            ahl = 100
+            if i == 1:
+                ahl = 30
+            new_target = GPSCoordinate(lat=point[0], lon=point[1], ahl=ahl)
+            await uav.driver._send_fly_to_target_signal_single(uav, new_target)
+            while True:
+                [dis, _] = gps_bearing(
+                    homeLattitude=uav.status.position.lat,
+                    homeLongitude=uav.status.position.lon,
+                    destinationLattitude=point[0],
+                    destinationLongitude=point[1],
+                )
+                if dis < 250:
+                    break
+                await trio.sleep(0.1)
+        # await uav.driver._send_auto_mode_single(uav)
+
     async def vtol_swarm(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
     ) -> FlockwaveMessage:
@@ -811,20 +808,25 @@ class SkybrushServer(DaemonApp):
         )
         parameters = dict(message.body)
         msg = parameters["message"].lower()
-        ids = parameters.pop("ids", ())
+        ids = parameters.pop("ids")
+        uavid = parameters.pop("uavid")
 
         if msg == "target":
+            from .VTOL import Guided_Mission
+
             lat = float(parameters.pop("lat"))
             lon = float(parameters.pop("lon"))
             uavid = parameters.pop("uavid")
+
+            res_latlon = Guided_Mission(lat, lon)
             uav = self.find_uav_by_id(uavid)
-            if uav:
-                await uav.driver._send_guided_mode_single(uav)
-                target = GPSCoordinate(
-                    lat=lat, lon=lon, ahl=math.ceil(uav.status.position.ahl)
-                )
-                result = await uav.driver._send_fly_to_target_signal_single(uav, target)
-            result = True
+
+            if not uav:
+                result = "No vehicle Connected"
+                return response
+            await uav.driver._send_guided_mode_single(uav)
+            self.run_in_background(self.simple_go_to, res_latlon, uav)
+            result = "success"
 
         if msg == "start_capture":
             from .cameraActions import start_or_stop
@@ -839,20 +841,21 @@ class SkybrushServer(DaemonApp):
         if msg == "uploadmission":
             from .VTOL import Dynamic_main, main
 
+            initial_mission = parameters.pop("mission")
             mission = parameters.pop("missiontype")
-            uavid = parameters.pop("uavid")
-            uav = self.find_uav_by_id(uavid)
-            uavs = []
-            for uav_id in ids:
-                if uav_id == uavid:
-                    uavs.append(uav)
-                    continue
-                uav_by_id = self.find_uav_by_id(uav_id)
-                uavs.append(uav_by_id)
-            downloadedMission = []
-            if uav:
-                manager = AutoMissionManager.for_uav(uav)
-                downloadedMission = await manager.get_automission_areas()
+            selectedIds = parameters.pop("selected")
+
+            uavs = {}
+
+            for uavid in selectedIds:
+                uavs[uavid] = self.find_uav_by_id(uavid)
+
+            # uavs = []
+            # for uav_id in ids:
+            #     uav = self.find_uav_by_id(uav_id)
+            #     uavs.append(uav)
+
+            downloadedMission = initial_mission if len(initial_mission) != 0 else []
 
             if mission == "dynamic type":
                 result = await Dynamic_main(uavs)
@@ -860,7 +863,6 @@ class SkybrushServer(DaemonApp):
                 result = await main(
                     parameters.pop("turn"),
                     int(parameters.pop("numofdrone")),
-                    int(uavid),
                     downloadedMission,
                     uavs,
                 )
@@ -874,34 +876,62 @@ class SkybrushServer(DaemonApp):
             result = True
 
         if msg == "download":
-            res = []
-            for id in ids:
-                uav = self.find_uav_by_id(id)
-                if uav:
-                    manager = AutoMissionManager.for_uav(uav)
-                    status = await manager.get_automission_areas()
-                    res.append(status)
-            result = res
+            from .socket.globalVariable import (
+                update_mission,
+                get_mission,
+                update_mission_index,
+                get_mission_index,
+                empty_mission,
+            )
+
+            selectedIds = parameters.pop("selected")
+
+            mission_index = get_mission_index()
+            print("mission_index", mission_index, mission_index % 2)
+            if mission_index % 2 == 0:
+                empty_mission()
+                for uavid in selectedIds:
+                    uav = self.find_uav_by_id(uavid)
+                    if uav:
+                        manager = AutoMissionManager.for_uav(uav)
+                        status = await manager.get_automission_areas()
+                        update_mission(status)
+                        print(status)
+                    print(uavid)
+            mission = get_mission()
+            update_mission_index()
+            print("Downloaded")
+            result = mission
 
         if msg == "spilt_mission":
             from .VTOL import SplitMission
 
             uavs = []
             for uav_id in ids:
-                uav_by_id = self.find_uav_by_id(uav_id)
-                uavs.append(uav_by_id)
+                uav = self.find_uav_by_id(uav_id)
+                if uav:
+                    uavs.append(uav)
 
-            result = await SplitMission(uavs)
+            # uavs = [
+            #     uav if uav_id == uavid else self.find_uav_by_id(uav_id)
+            #     for uav_id in ids
+            #     if uav_id == uavid or self.find_uav_by_id(uav_id)
+            # ]
+
+            result = await SplitMission(
+                center_latlon=parameters.pop("center_latlon"),
+                num_of_drones=int(parameters.pop("numofdrone")),
+                grid_spacing=int(parameters.pop("gridspacing")),
+                coverage_area=int(parameters.pop("coverage")),
+                uavs=uavs,
+            )
 
         if msg == "grid":
-            from .VTOL import (
-                CreateGridsForSpecifiedAreaAndSpecifiedDrones,
-            )
+            from .VTOL import GridFormation
 
             coords = parameters.pop("points")
             try:
-                # response.add_error()
-                result = CreateGridsForSpecifiedAreaAndSpecifiedDrones(
+                result = GridFormation(
                     coords[1],
                     coords[0],
                     int(parameters.pop("numofdrone")),
@@ -909,7 +939,7 @@ class SkybrushServer(DaemonApp):
                     int(parameters.pop("coverage")),
                 )
             except Exception as e:
-                result = e
+                result = str(e)
 
         response.body["message"] = result
         response.body["method"] = msg
@@ -1121,6 +1151,7 @@ class SkybrushServer(DaemonApp):
                             )
                         else:
                             response.add_result(uav.id, result)
+
         return response
 
     def find_uav_by_id(
@@ -1803,11 +1834,11 @@ async def handleHomwLock(message: FlockwaveMessage, sender: Client, hub: Message
     return await app.home_save(message, sender)
 
 
-@app.message_hub.on("X-CAMERA-ACTION")
-async def handleCameraActions(
-    message: FlockwaveMessage, sender: Client, hub: MessageHub
-):
-    return await app.camera_actions(message, sender)
+# @app.message_hub.on("X-CAMERA-ACTION")
+# async def handleCameraActions(
+#     message: FlockwaveMessage, sender: Client, hub: MessageHub
+# ):
+#     return await app.camera_actions(message, sender)
 
 
 # ######################################################################## #

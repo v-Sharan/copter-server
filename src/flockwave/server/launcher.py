@@ -7,7 +7,6 @@ import os
 import sys
 import trio
 import warnings
-import threading
 from typing import Optional
 
 from flockwave import logger

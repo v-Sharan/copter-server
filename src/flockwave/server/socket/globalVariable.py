@@ -1,22 +1,112 @@
-home_pos = []
-goal_points = []
-goal_table = []
-return_goal_table = []
-grid_path_table = []
-Takeoff_Alt = 2.5
-logCounter = 0
-log_file_path = ""
-area_covered, minutes, seconds = 0, 0, 0
+home_pos: list = []
+goal_points: list = []
+goal_table: list = []
+return_goal_table: list = []
+grid_path_table: list = []
+Takeoff_Alt: str = 2.5
+logCounter: int = 0
+log_file_path: str = ""
+area_covered: int = 0
+minutes: int = 0
+seconds: int = 0
 removed_uav_grid_file_name = []
 removed_uav_grid_path_length = []
 gimbal_target = []
+mission = []
+mission_index = 0
+alts: dict[int, int] = {
+    1: 100,
+    2: 110,
+    3: 120,
+    5: 130,
+    6: 140,
+    7: 150,
+    8: 160,
+    10: 170,
+    11: 180,
+    12: 190,
+    13: 200,
+    14: 210,
+    15: 220,
+    16: 230,
+    18: 240,
+    20: 250,
+    22: 260,
+    23: 270,
+    24: 280,
+    25: 290,
+}
+
+drone = {
+    1: "01",
+    2: "02",
+    3: "03",
+    4: "05",
+    5: "06",
+    6: "07",
+    7: "08",
+    8: "10",
+    9: "11",
+    10: "12",
+    11: "13",
+    12: "14",
+    13: "15",
+    14: "16",
+    15: "18",
+    16: "20",
+    17: "22",
+    18: "23",
+    19: "24",
+    20: "25",
+}
+
+batch_wise_location = {
+    ("01", "02", "03", "05", "06"): (13.21, 10),
+    ("07", "08", "10", "11", "12"): (12.22, 10),
+    ("13", "14", "15", "16", "18"): (12.22, 10),
+    ("20", "22", "23", "24", "25"): (12.22, 10),
+}
 
 
-def update_coverage_time(area_covered1, minutes1, seconds1):
+def find_value_in_dict(value_to_find: str) -> tuple[float] | None:
+    global batch_wise_location
+    locations = batch_wise_location
+    for key, values in locations.items():
+        if value_to_find in key:
+            return values
+    return None
+
+
+def update_coverage_time(area_covered1, minutes1, seconds1) -> None:
     global area_covered, minutes, seconds
     area_covered = area_covered1
     minutes = minutes1
     seconds = seconds1
+
+
+def update_mission_index():
+    global mission_index
+    mission_index += 1
+
+
+def get_mission_index():
+    global mission_index
+    return mission_index
+
+
+def update_mission(add_mission):
+    global mission
+    mission.append(add_mission)
+
+
+def empty_mission():
+    global mission
+    mission = []
+
+
+def get_mission():
+    global mission
+    return mission
 
 
 def get_coverage_time():
@@ -117,3 +207,10 @@ def getRemovedUAVfilename():
 def getRemovedUAVgridpathlength():
     global removed_uav_grid_path_length
     return removed_uav_grid_path_length
+
+
+def find_value_in_dict(value_to_find, data_dict):
+    for key, values in data_dict.items():
+        if value_to_find in values:
+            return key
+    return None

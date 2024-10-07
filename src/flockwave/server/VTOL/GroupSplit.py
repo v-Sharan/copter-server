@@ -2,42 +2,33 @@ import csv
 import simplekml
 from geopy.distance import distance
 from geopy.point import Point
-from ..socket.globalVariable import drone
 
 
-def GridFormation(
+def CreateGridsForSpecifiedAreaAndSpecifiedDrones(
     center_latitude: float,
     center_longitude: float,
     num_of_drones: int,
     grid_space: int,
     coverage_area: int,
-) -> bool:
+    start_index: int,
+) -> None:
     center_lat = center_latitude
     center_lon = center_longitude
 
     num_rectangles = num_of_drones
     grid_spacing = grid_space
     meters_for_extended_lines = 250
-    gap_between_rectangles = 50
-
-    drone_id = drone
 
     full_width, full_height = coverage_area, coverage_area
 
-    total_gap_height = (num_rectangles - 1) * gap_between_rectangles
-    available_height = full_height - total_gap_height
-    rectangle_height = available_height / num_rectangles
-
-    # rectangle_height = full_height / num_rectangles
+    rectangle_height = full_height / num_rectangles
 
     center_point = Point(center_lat, center_lon)
 
-    csv_datas = []
-
     west_edge = distance(meters=full_width / 2).destination(center_point, 270)
+    index = start_index
 
     for i in range(num_rectangles):
-        uav_id = int(drone_id[i + 1])
         top_offset = (i * rectangle_height) - (full_height / 2) + (rectangle_height / 2)
 
         top_center = distance(meters=top_offset).destination(center_point, 0)
@@ -127,29 +118,64 @@ def GridFormation(
             current_lat = (
                 distance(meters=grid_spacing).destination(current_point, 0).latitude
             )
-        kml_filename = f"search-drone-{uav_id}.kml"
+
+        kml_filename = f"search-drone-{index}.kml"
         kml.save(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/"
             + kml_filename
         )
-        csv_datas.append(csv_data)
 
-    minimum_waypoints = len(min(csv_datas, key=len))
-    for i in range(len(csv_datas)):
-        uav_id = int(drone_id[i + 1])
-        csv_filename = f"search-drone-{uav_id}.csv"
-        number_of_waypoints = 0
+        csv_filename = f"search-drone-{index}.csv"
         with open(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/"
             + csv_filename,
             mode="w",
             newline="",
         ) as file:
-            for j in range(len(csv_datas[i])):
-                if number_of_waypoints < minimum_waypoints:
-                    writer = csv.writer(file)
-                    writer.writerow(csv_datas[i][j])
-                number_of_waypoints += 1
-    print("Grid Created Successfully")
+            writer = csv.writer(file)
+            writer.writerows(csv_data)
+        index += 1
 
+
+def GroupSplitting(
+    center_lat_lons: list[list[float]],
+    num_of_drones: int,
+    grid_spacing: int,
+    coverage_area: int,
+) -> bool:
+    drones_array = [0] * len(center_lat_lons)
+    for i in range(num_of_drones):
+        drones_array[i % len(center_lat_lons)] += 1
+    start = 1
+    for i in range(len(center_lat_lons)):
+        if drones_array[i] == 0:
+            continue
+        CreateGridsForSpecifiedAreaAndSpecifiedDrones(
+            center_lat_lons[i][1],
+            center_lat_lons[i][0],
+            drones_array[i],
+            grid_spacing,
+            coverage_area,
+            start,
+        )
+        start += drones_array[i]
     return True
+
+
+# center_lat = 13.386046
+# center_lon = 80.231535
+
+# center_lat_lons = [
+#     [13.386046, 80.231535],
+#     [13.386046, 80.231535],
+#     [13.386046, 80.231535],
+#     [13.386046, 80.231535],
+#     [13.386046, 80.231535],
+#     [13.386046, 80.231535],
+# ]
+
+# num_of_drones = 15
+# grid_spacing = 50
+# coverage_area = 1200
+
+# GroupSplitting(center_lat_lons, num_of_drones, grid_spacing, coverage_area)

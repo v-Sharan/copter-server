@@ -181,6 +181,15 @@ class AutoMissionManager:
                     if num_items == index:
                         finished = True
 
+    async def clear_mission(self):
+        mission_type = MAVMissionType.MISSION
+        reply = await self._send_and_wait(
+            mission_type,
+            spec.mission_clear_all(mission_type=mission_type),
+            spec.mission_ack(mission_type=mission_type),
+        )
+        return reply
+
     async def _send_and_wait(
         self,
         mission_type: MAVMissionType,

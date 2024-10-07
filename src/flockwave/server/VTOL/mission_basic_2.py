@@ -8,11 +8,12 @@ from flockwave.server.ext.mavlink.automission import AutoMissionManager
 from flockwave.server.ext.mavlink.enums import MAVCommand
 from flockwave.gps.vectors import GPSCoordinate
 from typing import List
+from trio import sleep
 
 
 async def add_mavlink_mission(i: int, alt: int, uav: UAV) -> None:
     manager = AutoMissionManager.for_uav(uav)
-    await manager.set_automission_areas([])
+    await manager.clear_mission()
     search_file = "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/search-drone-"
     points_coordinate = []
     prev_lat, prev_lon = 0, 0
@@ -71,15 +72,17 @@ def convert_to_missioncmd(
     return points_mission
 
 
-async def Dynamic_main(uavs: list[UAV]) -> bool:
+async def Dynamic_main(uavs: dict[str, UAV]) -> bool:
+    from ..socket.globalVariable import alts
 
     index = 0
-    alt = 100
-    for uav in uavs:
-        if uav:
-            await uav.driver._send_guided_mode_single(uav)
-            time.sleep(0.5)
-            await add_mavlink_mission(index, alt, uav)
+    alt = 0
+    for i, uav in enumerate(uavs):
+        alt = alts[int(uav)]
+        vehicle = uavs[uav]
+        if vehicle:
+            await vehicle.driver._send_guided_mode_single(vehicle)
+            await sleep(0.5)
+            await add_mavlink_mission(index, alt, vehicle)
             index += 1
-            alt += 10
     return True

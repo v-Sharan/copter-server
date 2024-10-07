@@ -6,6 +6,7 @@ from typing import Any, Iterable, Optional, Sequence, Union
 from .commands import CommandExecutionStatus
 from .metamagic import ModelMeta
 
+import json
 
 __all__ = ("FlockwaveMessage", "FlockwaveNotification", "FlockwaveResponse")
 

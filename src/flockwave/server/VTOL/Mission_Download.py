@@ -4,26 +4,25 @@ from .new_Right import main as VPR
 from flockwave.server.model import UAV
 
 
-def download_mission_kml(kml_file: str, mission: list[float], sys_id: int) -> None:
+def download_mission_kml(kml_file: str, mission: list[float]) -> None:
     kml = simplekml.Kml()
     if len(mission) > 0:
         for i, cmd in enumerate(mission):
-            kml.newpoint(name="{}_{}".format(sys_id, i), coords=[(cmd[0], cmd[1])])
+            kml.newpoint(name="{}_coordinate".format(i), coords=[(cmd[0], cmd[1])])
     kml.save(kml_file)
 
 
 async def main(
     selected_turn: str,
     numOfDrones: int,
-    uavid: int,
     mission: list[float],
-    uavs: list[UAV],
+    # uavs: list[UAV],
+    uavs: dict[str, UAV],
 ) -> bool:
     if len(mission) > 0:
         download_mission_kml(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml",
             mission,
-            uavid,
         )
         if selected_turn == "left":
             await VPL(numOfDrones, uavs)

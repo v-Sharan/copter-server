@@ -6,6 +6,7 @@ import math
 from scipy import interpolate
 from .mission_basic_1 import main as MB
 from ..model.uav import UAV
+from ..socket.globalVariable import drone
 
 
 def destination_location(homeLattitude, homeLongitude, distance, bearing):
@@ -128,6 +129,7 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     result = kml_read(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml"
     )
+    drone_id = drone
 
     numOfDrones = Drones
 
@@ -143,12 +145,14 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
         gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
     )
 
+    flag = 0
+
     if prev_bearing >= -30 and prev_bearing <= 30:
         x = -60
         y = 0
     elif prev_bearing >= -210 and prev_bearing <= -150:
         x = 60
-        y = 0
+        y = -60
     elif prev_bearing >= -125 and prev_bearing <= -50:
         x = 60
         y = 0
@@ -228,8 +232,11 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
             x = -60
             y = 60
         prev_bearing = bearing
-        res = generate_XY_Positions(numOfDrones, x, y, result[index])
-
+        if not flag:
+            res = [result[index]] * numOfDrones
+        else:
+            res = generate_XY_Positions(numOfDrones, x, y, result[index])
+        flag = 1
         for i in range(len(res)):
             lat_lons[i].append(res[i])
 
@@ -252,17 +259,23 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     elif bearing >= 50 and bearing <= 125:
         x = 0
         y = -60
+    elif bearing >= 130 and bearing >= 210:
+        x = 60
+        y = -60
 
     res = generate_XY_Positions(numOfDrones, x, y, result[len(result) - 1])
 
     for i in range(len(res)):
         lat_lons[i].append(res[i])
 
+    uav_id = 0
+
     for i in range(numOfDrones):
+        uav_id = int(drone_id[i + 1])
         with open(
-            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-"
-            + str(i + 1)
-            + ".csv",
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
+                uav_id
+            ),
             "w",
             newline="",
         ) as f:
@@ -270,17 +283,20 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
             for j in range(len(lat_lons[i])):
 
                 csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
+    uav_id = 0
 
     for i in range(numOfDrones):
         lat_lons[i] = lat_lons[i][::-1]
-
+        uav_id = int(drone_id[i + 1])
         with open(
-            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-"
-            + str(i + 1)
-            + ".csv",
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-{}.csv".format(
+                uav_id
+            ),
+            "w",
             "w",
             newline="",
         ) as f:
+            uav_id = drone[i]
             csvwriter = csv.writer(f)
             for j in range(len(lat_lons[i])):
                 csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])

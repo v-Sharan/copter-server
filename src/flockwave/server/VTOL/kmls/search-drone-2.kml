@@ -12,79 +12,79 @@
             <styleUrl>#34</styleUrl>
             <LineString id="32">
                 <altitudeMode>clampToGround</altitudeMode>
-                <coordinates>80.2260868402398,13.386747342659472,0.0 80.2353192302429,13.3867471740556,0.0 80.23695129087402,13.385149314653011,0.0 80.23531924746466,13.387199115410503,0.0 80.2260868402398,13.387199284020273,0.0 80.22445477656353,13.38560142467455,0.0 80.2260868402398,13.387651225364943,0.0 80.23531926468705,13.387651056749277,0.0 80.2369513314063,13.386053197460376,0.0 80.2353192819101,13.388102998071918,0.0 80.2260868402398,13.38810316669348,0.0 80.22445477047518,13.386505307461452,0.0</coordinates>
+                <coordinates>80.23687865998046,13.35463972219989,0.0 80.27380333224652,13.354637031239905,0.0 80.27543517689027,13.35303916780308,0.0 80.27380340095314,13.35508897365113,0.0 80.23687865998046,13.355091664705437,0.0 80.2352468122826,13.353493801325664,0.0 80.23687865998046,13.35554360719489,0.0 80.27380346966231,13.355540916046262,0.0 80.27543532037825,13.353943052722874,0.0 80.27380353837401,13.355992858425296,0.0 80.23687865998046,13.355995549668249,0.0 80.23524680621018,13.35439768640192,0.0</coordinates>
             </LineString>
         </Placemark>
         <Placemark id="37">
             <name>1</name>
             <Point id="36">
-                <coordinates>80.2260868402398,13.386747342659472,0.0</coordinates>
+                <coordinates>80.23687865998046,13.35463972219989,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="39">
             <name>2</name>
             <Point id="38">
-                <coordinates>80.2353192302429,13.3867471740556,0.0</coordinates>
+                <coordinates>80.27380333224652,13.354637031239905,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="41">
             <name>3</name>
             <Point id="40">
-                <coordinates>80.23695129087402,13.385149314653011,0.0</coordinates>
+                <coordinates>80.27543517689027,13.35303916780308,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="43">
             <name>4</name>
             <Point id="42">
-                <coordinates>80.23531924746466,13.387199115410503,0.0</coordinates>
+                <coordinates>80.27380340095314,13.35508897365113,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="45">
             <name>5</name>
             <Point id="44">
-                <coordinates>80.2260868402398,13.387199284020273,0.0</coordinates>
+                <coordinates>80.23687865998046,13.355091664705437,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="47">
             <name>6</name>
             <Point id="46">
-                <coordinates>80.22445477656353,13.38560142467455,0.0</coordinates>
+                <coordinates>80.2352468122826,13.353493801325664,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="49">
             <name>7</name>
             <Point id="48">
-                <coordinates>80.2260868402398,13.387651225364943,0.0</coordinates>
+                <coordinates>80.23687865998046,13.35554360719489,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="51">
             <name>8</name>
             <Point id="50">
-                <coordinates>80.23531926468705,13.387651056749277,0.0</coordinates>
+                <coordinates>80.27380346966231,13.355540916046262,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="53">
             <name>9</name>
             <Point id="52">
-                <coordinates>80.2369513314063,13.386053197460376,0.0</coordinates>
+                <coordinates>80.27543532037825,13.353943052722874,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="55">
             <name>10</name>
             <Point id="54">
-                <coordinates>80.2353192819101,13.388102998071918,0.0</coordinates>
+                <coordinates>80.27380353837401,13.355992858425296,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="57">
             <name>11</name>
             <Point id="56">
-                <coordinates>80.2260868402398,13.38810316669348,0.0</coordinates>
+                <coordinates>80.23687865998046,13.355995549668249,0.0</coordinates>
             </Point>
         </Placemark>
         <Placemark id="59">
             <name>12</name>
             <Point id="58">
-                <coordinates>80.22445477047518,13.386505307461452,0.0</coordinates>
+                <coordinates>80.23524680621018,13.35439768640192,0.0</coordinates>
             </Point>
         </Placemark>
     </Document>

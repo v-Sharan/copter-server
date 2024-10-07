@@ -8,12 +8,14 @@ from flockwave.server.model import UAV
 from flockwave.server.ext.mavlink.automission import AutoMissionManager
 from flockwave.server.ext.mavlink.enums import MAVCommand
 from flockwave.gps.vectors import GPSCoordinate
+from .GroupSplit import GroupSplitting
+from trio import sleep
 
 
 async def add_mavlink_mission(i: int, alt: int, uav: UAV) -> None:
     manager = AutoMissionManager.for_uav(uav)
-    await manager.set_automission_areas([])
-    search_file = "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/search-drone-split-"
+    await manager.clear_mission()
+    search_file = "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/search-drone-"
     points_coordinate = []
     prev_lat, prev_lon = 0, 0
     with open(
@@ -69,13 +71,26 @@ def convert_to_missioncmd(points_coordinate):
     return points_mission
 
 
-async def SplitMission(uavs: list[UAV]) -> bool:
+async def SplitMission(
+    uavs: list[UAV],
+    center_latlon: list[list[float]],
+    num_of_drones: int,
+    grid_spacing: int,
+    coverage_area: int,
+) -> bool:
+    isDone = GroupSplitting(
+        center_lat_lons=center_latlon,
+        num_of_drones=num_of_drones,
+        grid_spacing=grid_spacing,
+        coverage_area=coverage_area,
+    )
     index = 0
     alt = 100
     for uav in uavs:
-        if uav:
+        if uav and isDone:
             await uav.driver._send_guided_mode_single(uav)
+            await sleep(0.5)
             await add_mavlink_mission(index, alt, uav)
             index += 1
-            alt += 25
+            alt += 10
     return True
