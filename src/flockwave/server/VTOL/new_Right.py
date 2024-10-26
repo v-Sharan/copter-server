@@ -6,7 +6,6 @@ import math
 from scipy import interpolate
 from .mission_basic_1 import main as MB
 from flockwave.server.model import UAV
-from flockwave.server.socket.globalVariable import drone
 
 
 def destination_location(
@@ -130,11 +129,10 @@ def generate_XY_Positions(
     return XY_values
 
 
-async def main(Drones: int, uavs: list[UAV]) -> None:
+async def main(Drones: int, uavs: dict[str, UAV]) -> None:
     result = kml_read(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml"
     )
-    drone_id = drone
 
     numOfDrones = Drones
 
@@ -260,10 +258,14 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
         lat_lons[i].append(res[i])
 
     for i in range(numOfDrones):
-        uav_id = int(drone_id[i + 1])
+        print(
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
+                i + 1
+            ),
+        )
         with open(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
-                uav_id
+                i + 1
             ),
             "w",
             newline="",
@@ -273,10 +275,9 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
                 csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
 
     for i in range(numOfDrones):
-        uav_id = int(drone_id[i + 1])
         with open(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-{}.csv".format(
-                uav_id
+                i + 1
             ),
             "w",
             newline="",

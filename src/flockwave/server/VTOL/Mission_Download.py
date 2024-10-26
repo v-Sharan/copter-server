@@ -16,7 +16,6 @@ async def main(
     selected_turn: str,
     numOfDrones: int,
     mission: list[float],
-    # uavs: list[UAV],
     uavs: dict[str, UAV],
 ) -> bool:
     if len(mission) > 0:

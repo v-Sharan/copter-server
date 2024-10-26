@@ -235,16 +235,16 @@ def convert_to_missioncmd(
 
 
 async def main(uavs: dict[str, UAV]) -> bool:
-    from ..socket.globalVariable import alts
+    from ..socket.globalVariable import alts, drone
 
     alt = 0
-    index = 0
+    drone_id = drone
     for i, uav in enumerate(uavs):
         alt = alts[int(uav)]
         print("mission:", i, alt)
         vehicle = uavs[uav]
         if vehicle:
-            await add_mavlink_mission1(int(uav), alt, vehicle)
+            await add_mavlink_mission1(drone_id[i + 1], alt, vehicle)
         # await add_mavlink_mission(index, alt, uav, altitudes[i])
     print("Uploaded")
     return True

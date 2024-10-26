@@ -28,11 +28,14 @@ def destination_location(
 
 
 def Guided_Mission(t_lat: float, t_lon: float) -> List[List[float]]:
+
     lat_lon1 = destination_location(t_lat, t_lon, float(500), float(-90))
     lat1, lon1 = lat_lon1[0], lat_lon1[1]
     lat_lon2 = destination_location(t_lat, t_lon, float(500), float(90))
     lat2, lon2 = lat_lon2[0], lat_lon2[1]
+    lat_lon3 = destination_location(t_lat, t_lon, float(1000), float(45))
+    lat3, lon3 = lat_lon3[0], lat_lon3[1]
 
-    result = [[lat1, lon1], [t_lat, t_lon], [lat2, lon2]]
+    result = [[lat1, lon1], [t_lat, t_lon], [lat2, lon2], [lat3, lon3]]
 
     return result

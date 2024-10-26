@@ -210,7 +210,9 @@ class UAVBase(UAV):
             "09": "192.168.6.219",
             "10": "192.168.6.220",
         }
-        self._gimabl = Gimbal(port=2000, position=self._status.position)
+        self._gimabl = Gimbal(
+            host=_gimbal_ip.get(id), port=2000, position=self._status.position
+        )
         self._initialize_device_tree_node(self._device_tree_node)
 
     @property
@@ -1014,6 +1016,33 @@ class UAVDriver(Generic[TUAV], metaclass=ABCMeta):
             transport=transport,
         )
 
+    def vtol_upload_mission(
+        self, uavs: list[TUAV], transport: Optional[TransportOptions] = None
+    ):
+        """Asks the driver to send a return-to-home signal to the given
+        UAVs, each of which are assumed to be managed by this driver.
+
+        Typically, you don't need to override this method when implementing
+        a driver; override ``vtol_upload_mission()`` and
+        optionally ``vtol_upload_mission()`` instead.
+
+        Parameters:
+            uavs: the UAVs to address with this request.
+            transport: transport options for sending the signal
+
+        Returns:
+            dict mapping UAVs to the corresponding results (which may also be
+            errors or awaitables; it is the responsibility of the caller to
+            evaluate errors and wait for awaitables)
+        """
+        return self._dispatch_request(
+            uavs,
+            "guided mode signal",
+            self._vtol_upload_mission,
+            getattr(self, "vtol_upload_mission", None),
+            transport=transport,
+        )
+
     def send_auto_mode(
         self, uavs: list[TUAV], transport: Optional[TransportOptions] = None
     ):
@@ -1098,6 +1127,40 @@ class UAVDriver(Generic[TUAV], metaclass=ABCMeta):
             "takeoff signal",
             self._send_takeoff_signal_single,
             getattr(self, "_send_takeoff_signal_broadcast", None),
+            scheduled=scheduled,
+            transport=transport,
+        )
+
+    def start_capture_cam(
+        self,
+        uavs: list[TUAV],
+        *,
+        scheduled: bool = False,
+        transport: Optional[TransportOptions] = None,
+    ):
+        """Asks the driver to send a takeoff signal to the given UAVs, each
+        of which are assumed to be managed by this driver.
+
+        Typically, you don't need to override this method when implementing
+        a driver; override ``_start_capture_cam_single()`` and optionally
+        ``_start_capture_cam_signal()`` instead.
+
+        Parameters:
+            uavs: the UAVs to address with this request
+            scheduled: whether the takeoff signal was scheduled earlier and is
+                now issued autonomously by the server
+            transport: transport options for sending the signal
+
+        Returns:
+            dict mapping UAVs to the corresponding results (which may also be
+            errors or awaitables; it is the responsibility of the caller to
+            evaluate errors and wait for awaitables)
+        """
+        return self._dispatch_request(
+            uavs,
+            "takeoff signal",
+            self._start_capture_cam_signal,
+            getattr(self, "_start_capture_cam_signal_broadcast", None),
             scheduled=scheduled,
             transport=transport,
         )
@@ -1695,6 +1758,31 @@ class UAVDriver(Generic[TUAV], metaclass=ABCMeta):
         """
         raise NotImplementedError
 
+    def _vtol_upload_mission(
+        self, uav: TUAV, *, transport: Optional[TransportOptions] = None
+    ) -> None:
+        """Asks the driver to send a return-to-home signal to a single UAV
+        managed by this driver.
+
+        May return an awaitable if sending the signal takes a longer time.
+
+        The function follows the "samurai principle", i.e. "return victorious,
+        or not at all". It means that if it returns, the operation succeeded.
+        Raise an exception if the operation cannot be executed for any reason;
+        a RuntimeError is typically sufficient.
+
+        Parameters:
+            uav: the UAV to address with this request.
+            transport: transport options for sending the signal
+
+        Raises:
+            NotImplementedError: if the operation is not supported by the
+                driver yet, but there are plans to implement it
+            NotSupportedError: if the operation is not supported by the
+                driver and will not be supported in the future either
+        """
+        raise NotImplementedError
+
     def _send_shutdown_signal_single(
         self, uav: TUAV, *, transport: Optional[TransportOptions] = None
     ) -> None:
@@ -1721,6 +1809,31 @@ class UAVDriver(Generic[TUAV], metaclass=ABCMeta):
         raise NotImplementedError
 
     def _send_takeoff_signal_single(
+        self, uav: TUAV, *, transport: Optional[TransportOptions] = None
+    ) -> None:
+        """Asks the driver to send a takeoff signal to a single UAV managed
+        by this driver.
+
+        May return an awaitable if sending the signal takes a longer time.
+
+        The function follows the "samurai principle", i.e. "return victorious,
+        or not at all". It means that if it returns, the operation succeeded.
+        Raise an exception if the operation cannot be executed for any reason;
+        a RuntimeError is typically sufficient.
+
+        Parameters:
+            uav: the UAV to address with this request.
+            transport: transport options for sending the signal
+
+        Raises:
+            NotImplementedError: if the operation is not supported by the
+                driver yet, but there are plans to implement it
+            NotSupportedError: if the operation is not supported by the
+                driver and will not be supported in the future either
+        """
+        raise NotImplementedError
+
+    def _start_capture_cam_signal(
         self, uav: TUAV, *, transport: Optional[TransportOptions] = None
     ) -> None:
         """Asks the driver to send a takeoff signal to a single UAV managed

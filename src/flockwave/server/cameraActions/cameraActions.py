@@ -1,11 +1,33 @@
-import aiohttp
+import asks
 
-urls = []
+# import trio
+
+asks.init("trio")
+
+global_urls = [
+    "http://192.168.6.151:8000",
+    "http://192.168.6.155:8000",
+]
 
 
-async def start_or_stop(status):
-    for url in urls:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url + status) as response:
-                data = await response.json()
-                print(data)
+async def start():
+    global global_urls
+    base_url = global_urls
+    for url in base_url:
+        print(f"{url}/start_capture")
+        response = await asks.post(url)
+        print(response.json())
+    return True
+
+
+async def stop():
+    global global_urls
+    base_url = global_urls
+    for url in base_url:
+        print(f"{url}/stop_capture")
+        response = await asks.post(url)
+        print(response.json())
+    return True
+
+
+# trio.run(start)

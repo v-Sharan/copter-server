@@ -6,7 +6,6 @@ import math
 from scipy import interpolate
 from .mission_basic_1 import main as MB
 from ..model.uav import UAV
-from ..socket.globalVariable import drone
 
 
 def destination_location(homeLattitude, homeLongitude, distance, bearing):
@@ -124,12 +123,11 @@ def generate_XY_Positions(numOfDrones, x, y, origin):
     return XY_values
 
 
-async def main(Drones: int, uavs: list[UAV]) -> None:
+async def main(Drones: int, uavs: dict[str, UAV]) -> None:
 
     result = kml_read(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml"
     )
-    drone_id = drone
 
     numOfDrones = Drones
 
@@ -139,7 +137,7 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     x = -60
     y = -60
 
-    lat_lons = [[] for _ in range(len(uavs))]
+    lat_lons = [[] for _ in range(20)]
 
     prev_bearing = abs(
         gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
@@ -268,13 +266,10 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
     for i in range(len(res)):
         lat_lons[i].append(res[i])
 
-    uav_id = 0
-
     for i in range(numOfDrones):
-        uav_id = int(drone_id[i + 1])
         with open(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
-                uav_id
+                i + 1
             ),
             "w",
             newline="",
@@ -283,20 +278,16 @@ async def main(Drones: int, uavs: list[UAV]) -> None:
             for j in range(len(lat_lons[i])):
 
                 csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
-    uav_id = 0
 
     for i in range(numOfDrones):
         lat_lons[i] = lat_lons[i][::-1]
-        uav_id = int(drone_id[i + 1])
         with open(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-{}.csv".format(
-                uav_id
+                i + 1
             ),
-            "w",
             "w",
             newline="",
         ) as f:
-            uav_id = drone[i]
             csvwriter = csv.writer(f)
             for j in range(len(lat_lons[i])):
                 csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])

@@ -2,7 +2,6 @@ import csv
 import simplekml
 from geopy.distance import distance
 from geopy.point import Point
-from ..socket.globalVariable import drone
 
 
 def GridFormation(
@@ -20,8 +19,6 @@ def GridFormation(
     meters_for_extended_lines = 250
     gap_between_rectangles = 50
 
-    drone_id = drone
-
     full_width, full_height = coverage_area, coverage_area
 
     total_gap_height = (num_rectangles - 1) * gap_between_rectangles
@@ -37,7 +34,6 @@ def GridFormation(
     west_edge = distance(meters=full_width / 2).destination(center_point, 270)
 
     for i in range(num_rectangles):
-        uav_id = int(drone_id[i + 1])
         top_offset = (i * rectangle_height) - (full_height / 2) + (rectangle_height / 2)
 
         top_center = distance(meters=top_offset).destination(center_point, 0)
@@ -127,7 +123,7 @@ def GridFormation(
             current_lat = (
                 distance(meters=grid_spacing).destination(current_point, 0).latitude
             )
-        kml_filename = f"search-drone-{uav_id}.kml"
+        kml_filename = f"search-drone-{i+1}.kml"
         kml.save(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/"
             + kml_filename
@@ -136,8 +132,7 @@ def GridFormation(
 
     minimum_waypoints = len(min(csv_datas, key=len))
     for i in range(len(csv_datas)):
-        uav_id = int(drone_id[i + 1])
-        csv_filename = f"search-drone-{uav_id}.csv"
+        csv_filename = f"search-drone-{i+1}.csv"
         number_of_waypoints = 0
         with open(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/"

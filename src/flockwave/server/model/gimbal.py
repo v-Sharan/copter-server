@@ -22,7 +22,7 @@ class Gimbal:
     def __init__(
         self, host="192.168.6.121", port=2000, position=GPSCoordinate(0, 0, 0, 0)
     ) -> None:
-        self.host = "192.168.6.215"
+        self.host = host
         self.port = port
         self.tlat = 0
         self.tlon = 0
@@ -154,5 +154,3 @@ class Gimbal:
             thread2.start()
         except KeyboardInterrupt:
             self.socket.close()
-        # thread1.join()
-        # thread2.join()

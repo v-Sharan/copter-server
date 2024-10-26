@@ -80,6 +80,8 @@ from .utils import (
     mavlink_version_number_to_semver,
 )
 from flockwave.server.ext.mavlink.geofence import GeofenceManager
+from flockwave.server.cameraActions import start, stop
+from flockwave.server.ext.mavlink.automission import AutoMissionManager
 
 __all__ = ("MAVLinkDriver",)
 
@@ -773,8 +775,6 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         manager = GeofenceManager.for_uav(uav)
         result = await manager.get_geofence_areas(status)
 
-        print(result)
-
     async def _send_hover_signal_broadcast(self, *, transport=None) -> None:
         channel = transport_options_to_channel(transport)
 
@@ -1015,6 +1015,16 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
 
         # Send the takeoff command
         await uav.takeoff_to_relative_altitude(alt, channel=channel)
+
+    async def _start_capture_cam_signal(
+        self, uav: "MAVLinkUAV", *, scheduled: bool = False, transport=None
+    ) -> None: ...
+
+    async def _vtol_upload_mission(
+        self, uav: "MAVLinkUAV", *, scheduled: bool = False, transport=None
+    ) -> None:
+        manager = AutoMissionManager.for_uav(uav)
+        result = await manager.set_automission_areas()
 
     async def _set_parameter_single(
         self, uav: "MAVLinkUAV", name: str, value: Any
@@ -1369,7 +1379,7 @@ class MAVLinkUAV(UAVBase):
 
         lat, lon = int(target.lat * 1e7), int(target.lon * 1e7)
         params = {
-            "seq": 1,
+            "seq": 0,
             "command": MAVCommand.NAV_WAYPOINT,
             "param1": 0,
             "param2": 0,
@@ -1379,7 +1389,7 @@ class MAVLinkUAV(UAVBase):
             "y": lon,
             "z": altitude,
             "frame": MAVFrame.GLOBAL_RELATIVE_ALT,
-            "current": 2,
+            "current": 1,
             "autocontinue": 0,
         }
         message = spec.mission_item_int(**params)

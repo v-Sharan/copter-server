@@ -1,4 +1,7 @@
-from .cameraActions import start_or_stop
+from .cameraActions import start, stop
 
 
-__all__ = ("start_or_stop",)
+__all__ = (
+    "start",
+    "stop",
+)

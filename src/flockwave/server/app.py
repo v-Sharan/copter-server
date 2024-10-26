@@ -4,7 +4,7 @@ from appdirs import AppDirs
 from collections import defaultdict
 from inspect import isawaitable, isasyncgen
 from os import environ
-from trio import BrokenResourceError, move_on_after
+from trio import BrokenResourceError, move_on_after, sleep
 from typing import (
     Any,
     Iterable,
@@ -109,6 +109,9 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec]] = {
         "resume_from_low_power_mode",
         {"transport": TransportOptions.from_json},
     ),
+    "X-VTOL-UPLOAD-MISSION": ("vtol_upload_mission", None),
+    # "X-UAV-START-CAPTURE": ("start_capture_cam", None),
+    # "X-UAV-STOP-CAPTURE": ("stop_capture_cam", None),
 }
 
 #: Constant for a dummy UAV command handler that does nothing
@@ -780,12 +783,10 @@ class SkybrushServer(DaemonApp):
 
     async def simple_go_to(self, target: list[float], uav: UAV):
         from .VTOL import gps_bearing
-        import trio
 
         for i, point in enumerate(target):
-            ahl = 100
-            if i == 1:
-                ahl = 30
+            ahl = 200
+            print(point)
             new_target = GPSCoordinate(lat=point[0], lon=point[1], ahl=ahl)
             await uav.driver._send_fly_to_target_signal_single(uav, new_target)
             while True:
@@ -795,10 +796,26 @@ class SkybrushServer(DaemonApp):
                     destinationLattitude=point[0],
                     destinationLongitude=point[1],
                 )
-                if dis < 250:
+                if dis < 150:
                     break
-                await trio.sleep(0.1)
-        # await uav.driver._send_auto_mode_single(uav)
+                await sleep(0.1)
+        target.pop()
+        target.reverse()
+        for i, tar in enumerate(target):
+            ahl = 200
+            new_target = GPSCoordinate(lat=tar[0], lon=tar[1], ahl=ahl)
+            await uav.driver._send_fly_to_target_signal_single(uav, new_target)
+            while True:
+                [distance, _] = gps_bearing(
+                    homeLattitude=uav.status.position.lat,
+                    homeLongitude=uav.status.position.lon,
+                    destinationLattitude=tar[0],
+                    destinationLongitude=tar[1],
+                )
+                if distance < 150:
+                    break
+                await sleep(0.1)
+        await uav.driver._send_auto_mode_single(uav)
 
     async def vtol_swarm(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
@@ -816,7 +833,7 @@ class SkybrushServer(DaemonApp):
 
             lat = float(parameters.pop("lat"))
             lon = float(parameters.pop("lon"))
-            uavid = parameters.pop("uavid")
+            from .VTOL import gps_bearing
 
             res_latlon = Guided_Mission(lat, lon)
             uav = self.find_uav_by_id(uavid)
@@ -829,14 +846,14 @@ class SkybrushServer(DaemonApp):
             result = "success"
 
         if msg == "start_capture":
-            from .cameraActions import start_or_stop
+            from .cameraActions import start
 
-            result = await start_or_stop("start_capture")
+            result = await start()
 
         if msg == "stop_capture":
-            from .cameraActions import start_or_stop
+            from .cameraActions import stop
 
-            result = await start_or_stop("stop_capture")
+            result = await stop()
 
         if msg == "uploadmission":
             from .VTOL import Dynamic_main, main
@@ -906,17 +923,12 @@ class SkybrushServer(DaemonApp):
         if msg == "spilt_mission":
             from .VTOL import SplitMission
 
-            uavs = []
-            for uav_id in ids:
-                uav = self.find_uav_by_id(uav_id)
-                if uav:
-                    uavs.append(uav)
-
-            # uavs = [
-            #     uav if uav_id == uavid else self.find_uav_by_id(uav_id)
-            #     for uav_id in ids
-            #     if uav_id == uavid or self.find_uav_by_id(uav_id)
-            # ]
+            # uavs = []
+            # for uav_id in ids:
+            #     uav = self.find_uav_by_id(uav_id)
+            #     if uav:
+            #         uavs.append(uav)
+            uavs = [uav for uav_id in ids if (uav := self.find_uav_by_id(uav_id))]
 
             result = await SplitMission(
                 center_latlon=parameters.pop("center_latlon"),
@@ -932,8 +944,8 @@ class SkybrushServer(DaemonApp):
             coords = parameters.pop("points")
             try:
                 result = GridFormation(
-                    coords[1],
-                    coords[0],
+                    13.393633,
+                    80.239646,
                     int(parameters.pop("numofdrone")),
                     int(parameters.pop("gridspacing")),
                     int(parameters.pop("coverage")),
