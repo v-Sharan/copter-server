@@ -241,10 +241,10 @@ async def main(uavs: dict[str, UAV]) -> bool:
     drone_id = drone
     for i, uav in enumerate(uavs):
         alt = alts[int(uav)]
-        print("mission:", i, alt)
+        print("mission:", i + 1, alt)
         vehicle = uavs[uav]
         if vehicle:
-            await add_mavlink_mission1(drone_id[i + 1], alt, vehicle)
+            await add_mavlink_mission1(i + 1, alt, vehicle)
         # await add_mavlink_mission(index, alt, uav, altitudes[i])
     print("Uploaded")
     return True

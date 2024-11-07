@@ -1564,8 +1564,16 @@ class MAVLinkUAV(UAVBase):
             pass
 
     def handle_vfr_hud(self, message: MAVLinkMessage):
-        self.update_status(airspeed=message.airspeed)
-
+        self.update_status(throttle=message.throttle,airspeed=message.airspeed)
+        
+    def handle_update_wind(self, message: MAVLinkMessage):
+        self.update_status(wind_speed=message.speed)
+        if message.direction < 0:
+            wind_direction=message.direction + 360
+            self.update_status(wind_direction=wind_direction)
+            return
+        self.update_status(wind_direction=message.direction)
+        
     def handle_message_drone_show_status(self, message: MAVLinkMessage):
         """Handles an incoming drone show specific status message targeted at
         this UAV.

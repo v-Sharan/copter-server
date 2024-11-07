@@ -16,7 +16,7 @@ mission = []
 mission_index = 0
 alts: dict[int, int] = {
     1: 100,
-    3: 200,
+    3: 110,
     5: 120,
     # 1: 100,
     # 2: 110,
@@ -40,7 +40,7 @@ alts: dict[int, int] = {
     # 25: 290,
 }
 
-drone = {i: i for i in range(1, 21)}
+drone = {1: 1, 3: 2, 5: 3}
 
 past_distance: int | float = 0.0
 plat: float = 0.0

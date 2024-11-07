@@ -459,6 +459,41 @@ class SkybrushServer(DaemonApp):
                 statuses[uav_id] = uav.status
         return response
 
+    def create_send_reqcontrol(self, in_response_to: Optional[FlockwaveMessage] = None):
+        """Creates an UAV-INF message that contains information regarding
+        the UAVs with the given IDs.
+
+        Typically, you should not use this method from extensions because
+        it allows one to bypass the built-in rate limiting for UAV-INF
+        messages. The only exception is when ``in_response_to`` is set to
+        a certain message identifier, in which case it makes sense to send
+        the UAV-INF response immediately (after all, it was requested
+        explicitly). If you only want to broadcast UAV-INF messages to all
+        interested parties, use ``request_to_send_UAV_INF_message_for()``
+        instead, which will send the notification immediately if the rate
+        limiting constraints allow, but it may also wait a bit if the
+        UAV-INF messages are sent too frequently.
+
+        Parameters:
+            uav_ids: list of UAV IDs
+            in_response_to: the message that the constructed message will
+                respond to. ``None`` means that the constructed message will be
+                a notification.
+
+        Returns:
+            FlockwaveMessage: the UAV-INF message with the status info of
+                the given UAVs
+        """
+        statuses = {}
+
+        body = {"status": statuses, "type": "X-REQUEST-CONTROL"}
+        response = self.message_hub.create_response_or_notification(
+            body=body, in_response_to=in_response_to
+        )
+        statuses["Data"] = "Data 04"
+        print(response.body)
+        return response
+
     async def disconnect_client(
         self, client: Client, reason: Optional[str] = None, timeout: float = 10
     ) -> None:
@@ -827,13 +862,13 @@ class SkybrushServer(DaemonApp):
         msg = parameters["message"].lower()
         ids = parameters.pop("ids")
         uavid = parameters.pop("uavid")
+        selectedIds = parameters.pop("selected")
 
         if msg == "target":
             from .VTOL import Guided_Mission
 
             lat = float(parameters.pop("lat"))
             lon = float(parameters.pop("lon"))
-            from .VTOL import gps_bearing
 
             res_latlon = Guided_Mission(lat, lon)
             uav = self.find_uav_by_id(uavid)
@@ -856,27 +891,36 @@ class SkybrushServer(DaemonApp):
             result = await stop()
 
         if msg == "uploadmission":
-            from .VTOL import Dynamic_main, main
+            from .VTOL import Dynamic_main, main, GridFormation
 
-            initial_mission = parameters.pop("mission")
             mission = parameters.pop("missiontype")
-            selectedIds = parameters.pop("selected")
 
             uavs = {}
 
             for uavid in selectedIds:
-                uavs[uavid] = self.find_uav_by_id(uavid)
+                uav = self.find_uav_by_id(uavid)
+                if uav:
+                    uavs[uavid] = uav
 
-            # uavs = []
-            # for uav_id in ids:
-            #     uav = self.find_uav_by_id(uav_id)
-            #     uavs.append(uav)
+            coords = parameters.pop("points")
 
-            downloadedMission = initial_mission if len(initial_mission) != 0 else []
+            grid = GridFormation(
+                coords[1],
+                coords[0],
+                int(parameters.get("numofdrone")),
+                int(parameters.pop("gridspacing")),
+                int(parameters.pop("coverage")),
+            )
+
+            if not grid:
+                print("Grid", grid)
+                return
 
             if mission == "dynamic type":
                 result = await Dynamic_main(uavs)
             else:
+                initial_mission = parameters.pop("mission")
+                downloadedMission = initial_mission if len(initial_mission) != 0 else []
                 result = await main(
                     parameters.pop("turn"),
                     int(parameters.pop("numofdrone")),
@@ -900,8 +944,6 @@ class SkybrushServer(DaemonApp):
                 get_mission_index,
                 empty_mission,
             )
-
-            selectedIds = parameters.pop("selected")
 
             mission_index = get_mission_index()
             print("mission_index", mission_index, mission_index % 2)
@@ -928,7 +970,10 @@ class SkybrushServer(DaemonApp):
             #     uav = self.find_uav_by_id(uav_id)
             #     if uav:
             #         uavs.append(uav)
-            uavs = [uav for uav_id in ids if (uav := self.find_uav_by_id(uav_id))]
+            uavs = {}
+
+            for uavid in selectedIds:
+                uavs[uavid] = self.find_uav_by_id(uavid)
 
             result = await SplitMission(
                 center_latlon=parameters.pop("center_latlon"),
@@ -944,8 +989,8 @@ class SkybrushServer(DaemonApp):
             coords = parameters.pop("points")
             try:
                 result = GridFormation(
-                    13.393633,
-                    80.239646,
+                    coords[1],
+                    coords[0],
                     int(parameters.pop("numofdrone")),
                     int(parameters.pop("gridspacing")),
                     int(parameters.pop("coverage")),
@@ -956,6 +1001,15 @@ class SkybrushServer(DaemonApp):
         response.body["message"] = result
         response.body["method"] = msg
 
+        return response
+
+    async def request_control_access(
+        self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
+    ) -> FlockwaveMessage:
+        response = self.message_hub.create_response_or_notification(
+            body={}, in_response_to=message
+        )
+        await self.message_hub.send_message(self.create_send_reqcontrol())
         return response
 
     async def socket_response(
@@ -1388,6 +1442,10 @@ class SkybrushServer(DaemonApp):
             "UAV-INF", UAVMessageRateLimiter(self.create_UAV_INF_message_for)
         )
 
+        # self.rate_limiters.register(
+        #     "X-REQ-CONTROL",
+        # )
+
         # Create an object to hold information about all the objects that
         # the server knows about
         self.object_registry = ObjectRegistry()
@@ -1683,6 +1741,7 @@ def handle_ASYNC_RESUME(message: FlockwaveMessage, sender: Client, hub: MessageH
 
 @app.message_hub.on("CONN-INF")
 def handle_CONN_INF(message: FlockwaveMessage, sender: Client, hub: MessageHub):
+
     return app.create_CONN_INF_message_for(message.get_ids(), in_response_to=message)
 
 
@@ -1834,6 +1893,13 @@ async def handleVTOLSwarm(message: FlockwaveMessage, sender: Client, hub: Messag
     return await app.vtol_swarm(message, sender)
 
 
+@app.message_hub.on("X-REQ-CONTROL-ACCESS")
+async def handleRequestControl(
+    message: FlockwaveMessage, sender: Client, hub: MessageHub
+):
+    return await app.request_control_access(message, sender)
+
+
 @app.message_hub.on("X-Camera-MISSION")
 async def handleCameraMission(
     message: FlockwaveMessage, sender: Client, hub: MessageHub
@@ -1846,11 +1912,12 @@ async def handleHomwLock(message: FlockwaveMessage, sender: Client, hub: Message
     return await app.home_save(message, sender)
 
 
-# @app.message_hub.on("X-CAMERA-ACTION")
-# async def handleCameraActions(
-#     message: FlockwaveMessage, sender: Client, hub: MessageHub
-# ):
-#     return await app.camera_actions(message, sender)
+@app.message_hub.on("X-DATA")
+async def handleCameraActions(
+    message: FlockwaveMessage, sender: Client, hub: MessageHub
+):
+    print("X-DATA ENTRY")
+    return await app.request_control_access(message, sender)
 
 
 # ######################################################################## #

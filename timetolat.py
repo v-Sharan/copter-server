@@ -1,58 +1,28 @@
-#!/usr/bin/python
+# import math
 
-import os
-import datetime
+# Given values
+# mass = 1  # kg
+# gravity = 9.81  # m/s^2
+# air_density = 1.225  # kg/m^3
+# drag_coefficient = 1  # dimensionless
+# cross_sectional_area = 0.0046  # m^2
 
-from cuav.lib import cuav_util, mav_position
-from datetime import timedelta
+# Terminal velocity formula
+# terminal_velocity = math.sqrt(
+#     (2 * mass * gravity) / (air_density * drag_coefficient * cross_sectional_area)
+# )
+# print(terminal_velocity)
+from pymavlink import mavutil
 
-# from timestrap import formated_timeStrap
+master = mavutil.mavlink_connection("udpin:172.24.192.1:14551")
 
-
-def increment_timestamp_by_seconds(timestamp):
-    dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
-    dt += timedelta(seconds=1)
-    return dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-
-
-def process(timestamp):
-    """process a set of files"""
-    # count = 0
-
-    mpos = mav_position.MavInterpolator(gps_lag=(0.0))
-    mpos.set_logfile(os.path.join(os.getcwd(), "mav3.tlog"))
-
-    frame_time = 0
-
-    start_frame_time = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
-    frame_time = cuav_util.datetime_to_float(start_frame_time)
-    try:
-        if False:
-            roll = 0
-        else:
-            roll = None
-        pos = mpos.position(frame_time, 0.0, roll=0)
-    except mav_position.MavInterpolatorException as e:
-        print("{0} - {1} ".format(os.path.basename("mav3.tlog"), e))
-        # count += 1
-        pos = None
-    if pos:
-        lat_deg = pos.lat
-        lng_deg = pos.lon
-
-    print(
-        frame_time,
-        lat_deg,
-        lng_deg,
-    )
-
-
-# main program
-if __name__ == "__main__":
-    timestamp = "2024-06-29 09:08:29.507528"
-    # timestamp = "2024-06-27 16:00:54.334700"
-    # timestamp = formated_timeStrap()
-
-    while True:
-        process(timestamp)
-        timestamp = increment_timestamp_by_seconds(timestamp)
+while True:
+    msg = master.recv_match()
+    if not msg:
+        continue
+    if msg.get_type() == "WIND":
+        print(msg)
+        # if msg.direction < 0:
+        #     print(msg.direction + 360)
+        # else:
+        #     print(msg.direction)

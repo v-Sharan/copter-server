@@ -18,7 +18,7 @@ async def add_mavlink_mission(i: int, alt: int, uav: UAV) -> None:
     points_coordinate = []
     prev_lat, prev_lon = 0, 0
     with open(
-        search_file + str(i + 1) + ".csv",
+        search_file + str(i) + ".csv",
         "r",
     ) as f:
         csvreader = csv.reader(f)
@@ -35,7 +35,7 @@ async def add_mavlink_mission(i: int, alt: int, uav: UAV) -> None:
     )
     with open(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-"
-        + str(i + 1)
+        + str(i)
         + ".csv",
         "r",
     ) as f:
@@ -73,16 +73,16 @@ def convert_to_missioncmd(
 
 
 async def Dynamic_main(uavs: dict[str, UAV]) -> bool:
-    from ..socket.globalVariable import alts
+    from ..socket.globalVariable import alts, drone
 
-    index = 0
+    drone_id = drone
     alt = 0
     for i, uav in enumerate(uavs):
         alt = alts[int(uav)]
         vehicle = uavs[uav]
+        print(i + 1)
         if vehicle:
             await vehicle.driver._send_guided_mode_single(vehicle)
             await sleep(0.5)
-            await add_mavlink_mission(index, alt, vehicle)
-            index += 1
+            await add_mavlink_mission(i + 1, alt, vehicle)
     return True

@@ -19,7 +19,7 @@ async def add_mavlink_mission(i: int, alt: int, uav: UAV) -> None:
     points_coordinate = []
     prev_lat, prev_lon = 0, 0
     with open(
-        search_file + str(i + 1) + ".csv",
+        search_file + str(i) + ".csv",
         "r",
     ) as f:
         csvreader = csv.reader(f)
@@ -36,7 +36,7 @@ async def add_mavlink_mission(i: int, alt: int, uav: UAV) -> None:
     )
     with open(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-"
-        + str(i + 1)
+        + str(i)
         + ".csv",
         "r",
     ) as f:
@@ -72,25 +72,29 @@ def convert_to_missioncmd(points_coordinate):
 
 
 async def SplitMission(
-    uavs: list[UAV],
+    uavs: dict[int, UAV],
     center_latlon: list[list[float]],
     num_of_drones: int,
     grid_spacing: int,
     coverage_area: int,
 ) -> bool:
+    from ..socket.globalVariable import alts, drone
+
     isDone = GroupSplitting(
         center_lat_lons=center_latlon,
         num_of_drones=num_of_drones,
         grid_spacing=grid_spacing,
         coverage_area=coverage_area,
     )
-    index = 0
     alt = 100
-    for uav in uavs:
-        if uav and isDone:
-            await uav.driver._send_guided_mode_single(uav)
+    drone_id = drone
+    vehicle = None
+    for i, uav in enumerate(uavs):
+        alt = alts[int(uav)]
+        vehicle = uavs[uav]
+        if vehicle and isDone:
+            await vehicle.driver._send_guided_mode_single(vehicle)
             await sleep(0.5)
-            await add_mavlink_mission(index, alt, uav)
-            index += 1
-            alt += 10
+            await add_mavlink_mission(i + 1, alt, vehicle)
+        vehicle = None
     return True

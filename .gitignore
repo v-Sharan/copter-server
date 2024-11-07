@@ -26,9 +26,12 @@ req.py
 stream.py
 timestrap.py
 vid.py
-timetolatlon.py
+timetolat.py
 log/
 timetolat.py
 csvs/
 kmls/
 mount.py
+image.png
+data.csv
+data1.csv

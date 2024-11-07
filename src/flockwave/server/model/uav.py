@@ -73,9 +73,33 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
             "minimum": 0.0,
             "maximum": 360.0,
         }
+        throttle = {
+            "title": "Throttle percentage of UAV",
+            "description": "Throttle percentage of UAV",
+            "type": "int",
+            "minimum": 0,
+            "maximum": 100,
+        }
+        wind_speed = {
+            "title": "Wind Speed",
+            "description": "Wind speed of UAV",
+            "type": "float",
+            "minimum": 0.0,
+            "maximum": 150.0,
+        }
+        wind_direction = {
+            "title": "Wind Direction",
+            "description": "Wind speed of UAV",
+            "type": "float",
+            "minimum": 0.0,
+            "maximum": 360.0,
+        }
         schema = get_complex_object_schema("uavStatusInfo")
         schema["properties"]["airspeed"] = airspeed
         schema["properties"]["gimbalHeading"] = gimbalHeading
+        schema["properties"]["throttle"] = throttle
+        schema["properties"]["wind_speed"] = wind_speed
+        schema["properties"]["wind_direction"] = wind_direction
         mappers = {"heading": scaled_by(10), "debug": as_base64}
 
     debug: bytes
@@ -96,6 +120,9 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
     time: int
     bootms: int
     gimbalHeading: float
+    throttle: int
+    wind_direction: float
+    wind_speed: float
 
     def __init__(
         self, id: Optional[str] = None, timestamp: Optional[TimestampLike] = None
@@ -126,6 +153,9 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
         self.rssi = []
         self.airspeed = 0
         self.gimbalHeading = 0.0
+        self.throttle = 0
+        self.wind_direction = 0.0
+        self.wind_speed = 0.0
 
     @property
     def position_xyz(self) -> Optional[PositionXYZ]:
@@ -389,6 +419,9 @@ class UAVBase(UAV):
         airspeed: Optional[float] = None,
         time: Optional[int] = None,
         bootms: Optional[int] = None,
+        throttle: Optional[int] = None,
+        wind_direction: Optional[float] = None,
+        wind_speed: Optional[float] = None,
     ):
         """Updates the status information of the UAV.
 
@@ -422,6 +455,12 @@ class UAVBase(UAV):
             rssi: the measured RSSI values for each of the channels the UAV is
                 accessible on.
         """
+        if throttle is not None:
+            self._status.throttle = throttle
+        if wind_direction is not None:
+            self._status.wind_direction = wind_direction
+        if wind_speed is not None:
+            self._status.wind_speed = wind_speed
         if self._gimabl.bearing is not None:
             self._status.gimbalHeading = self._gimabl.bearing
         if airspeed is not None:

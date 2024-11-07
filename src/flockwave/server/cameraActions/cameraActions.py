@@ -1,7 +1,5 @@
 import asks
 
-# import trio
-
 asks.init("trio")
 
 global_urls = [
@@ -28,6 +26,3 @@ async def stop():
         response = await asks.post(url)
         print(response.json())
     return True
-
-
-# trio.run(start)
