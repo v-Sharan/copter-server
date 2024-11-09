@@ -890,6 +890,19 @@ class SkybrushServer(DaemonApp):
 
             result = await stop()
 
+        if msg == "payload_drop":
+            lat = float(parameters.get("lat"))
+            lon = float(parameters.get("lon"))
+            uav = self.find_uav_by_id(uavid)
+            if uav is None:
+                print("No Such UAV")
+                return
+            print(
+                uav.status.position.amsl,
+                uav.status.wind_direction,
+                uav.status.wind_speed,
+            )
+
         if msg == "uploadmission":
             from .VTOL import Dynamic_main, main, GridFormation
 
@@ -897,10 +910,10 @@ class SkybrushServer(DaemonApp):
 
             uavs = {}
 
-            for uavid in selectedIds:
-                uav = self.find_uav_by_id(uavid)
+            for uav_id in selectedIds:
+                uav = self.find_uav_by_id(uav_id)
                 if uav:
-                    uavs[uavid] = uav
+                    uavs[uav_id] = uav
 
             coords = parameters.pop("points")
 
@@ -1910,14 +1923,6 @@ async def handleCameraMission(
 @app.message_hub.on("X-HOME-LOCK")
 async def handleHomwLock(message: FlockwaveMessage, sender: Client, hub: MessageHub):
     return await app.home_save(message, sender)
-
-
-@app.message_hub.on("X-DATA")
-async def handleCameraActions(
-    message: FlockwaveMessage, sender: Client, hub: MessageHub
-):
-    print("X-DATA ENTRY")
-    return await app.request_control_access(message, sender)
 
 
 # ######################################################################## #

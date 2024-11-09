@@ -18,20 +18,15 @@ tmp/
 __pycache__/
 skybrush.cfg
 
-cuav-master/
-# siyi_sdk/
 detection/
 latlonError.py
 req.py
 stream.py
 timestrap.py
-vid.py
-timetolat.py
+with_air_payload.py
 log/
-timetolat.py
 csvs/
 kmls/
-mount.py
 image.png
-data.csv
-data1.csv
+func.py
+windestimation.py

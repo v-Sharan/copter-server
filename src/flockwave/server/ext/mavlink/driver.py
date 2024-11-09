@@ -767,8 +767,11 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_fly_to_target_signal_single(
         self, uav: "MAVLinkUAV", target: GPSCoordinate
     ) -> None:
+        from flockwave.server.socket.globalVariable import alts
+
+        alt = alts[int(uav.id)]
         await uav.driver._send_guided_mode_single(uav)
-        await uav.fly_to(target)
+        await uav.fly_to(target, alt)
 
     async def _send_mission_download_signal_single(self, uav: "MAVLinkUAV") -> None:
         status = GeofenceStatus()
@@ -1349,7 +1352,7 @@ class MAVLinkUAV(UAVBase):
         message = create_led_control_packet()
         await self.driver.send_packet(message, self, channel=channel)
 
-    async def fly_to(self, target: GPSCoordinate) -> None:
+    async def fly_to(self, target: GPSCoordinate, alt: int | None) -> None:
         """Sends a command to the UAV to reposition it to the given coordinate,
         where the altitude may be specified in AMSL or AHL.
         """
@@ -1358,19 +1361,25 @@ class MAVLinkUAV(UAVBase):
             await self._fly_to_with_repositioning(target)
         else:
             # Implementation of fly_to() with a guided mode command
-            await self._fly_to_in_guided_mode(target)
+            await self._fly_to_in_guided_mode(target, alt)
 
-    async def _fly_to_in_guided_mode(self, target: GPSCoordinate) -> None:
+    async def _fly_to_in_guided_mode(
+        self, target: GPSCoordinate, alt: int | None
+    ) -> None:
         """Implementation of `fly_to()` using a MAVLink
         SET_POSITION_TARGET_GLOBAL_INT guided mode message.
         """
+
         if target.amsl is None:
             frame = MAVFrame.GLOBAL_RELATIVE_ALT_INT
             if target.ahl is None:
                 # We cannot simply set Z_IGNORE in the type mask because that
                 # does not work with ArduCopter (it would ignore the whole
                 # position).
-                altitude = self.status.position.ahl
+                if alt is None:
+                    altitude = self.status.position.ahl
+                else:
+                    altitude = alt
             else:
                 altitude = target.ahl
         else:
@@ -1388,8 +1397,8 @@ class MAVLinkUAV(UAVBase):
             "x": lat,
             "y": lon,
             "z": altitude,
-            "frame": MAVFrame.GLOBAL_RELATIVE_ALT,
-            "current": 1,
+            "frame": frame,
+            "current": 2,
             "autocontinue": 0,
         }
         message = spec.mission_item_int(**params)
@@ -1564,16 +1573,16 @@ class MAVLinkUAV(UAVBase):
             pass
 
     def handle_vfr_hud(self, message: MAVLinkMessage):
-        self.update_status(throttle=message.throttle,airspeed=message.airspeed)
-        
+        self.update_status(throttle=message.throttle, airspeed=message.airspeed)
+
     def handle_update_wind(self, message: MAVLinkMessage):
         self.update_status(wind_speed=message.speed)
         if message.direction < 0:
-            wind_direction=message.direction + 360
+            wind_direction = message.direction + 360
             self.update_status(wind_direction=wind_direction)
             return
         self.update_status(wind_direction=message.direction)
-        
+
     def handle_message_drone_show_status(self, message: MAVLinkMessage):
         """Handles an incoming drone show specific status message targeted at
         this UAV.
