@@ -24,8 +24,8 @@ class Gimbal:
     ) -> None:
         self.host = host
         self.port = port
-        self.tlat = 0
-        self.tlon = 0
+        self.tlat = 13.3914565
+        self.tlon = 80.2391839
         self.connected = False
         self.position = position
         self.bearing = 0

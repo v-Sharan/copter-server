@@ -1,3 +1,5 @@
+from flockwave.gps.vectors import GPSCoordinate
+
 home_pos: list = []
 goal_points: list = []
 goal_table: list = []
@@ -15,9 +17,10 @@ gimbal_target = []
 mission = []
 mission_index = 0
 alts: dict[int, int] = {
-    1: 100,
-    2: 110,
-    3: 120,
+    5: 200,
+    7: 210,
+    3: 200,
+    12: 300,
     # 1: 100,
     # 2: 110,
     # 3: 120,
@@ -40,7 +43,7 @@ alts: dict[int, int] = {
     # 25: 290,
 }
 
-drone = {1: 1, 2: 2, 3: 3}
+drone = {5: 1, 7: 2}
 
 past_distance: int | float = 0.0
 plat: float = 0.0
@@ -62,6 +65,18 @@ plon: float = 0.0
 #             return values
 #     return None
 trail: bool = False
+target_confirmation = GPSCoordinate(lat=0, lon=0, amsl=None, ahl=None, agl=None)
+
+
+def get_target_confirm():
+    global target_confirmation
+    return
+
+
+def update_target_confirmation(lat, lon):
+    global target_confirmation
+    target_confirmation.lat = lat
+    target_confirmation.lon = lon
 
 
 def update_trail() -> None:

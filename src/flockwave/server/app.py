@@ -75,10 +75,6 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec]] = {
         "send_fly_to_target_signal",
         {"target": GPSCoordinate.from_json},
     ),
-    "X-UAV-AUTOMISSION-DOWNLOAD": (
-        "send_mission_download_signal",
-        {"transport": TransportOptions.from_json},
-    ),
     "UAV-HALT": ("send_shutdown_signal", {"transport": TransportOptions.from_json}),
     "UAV-HOVER": ("send_hover_signal", {"transport": TransportOptions.from_json}),
     "UAV-LAND": ("send_landing_signal", {"transport": TransportOptions.from_json}),
@@ -818,10 +814,11 @@ class SkybrushServer(DaemonApp):
 
     async def simple_go_to(self, target: list[float], uav: UAV):
         from .VTOL import gps_bearing
+        from .socket.globalVariable import alts
 
+        print(uav.id)
+        ahl = alts[int(uav.id)]
         for i, point in enumerate(target):
-            ahl = 200
-            print(point)
             new_target = GPSCoordinate(lat=point[0], lon=point[1], ahl=ahl)
             await uav.driver._send_fly_to_target_signal_single(uav, new_target)
             while True:
@@ -831,13 +828,12 @@ class SkybrushServer(DaemonApp):
                     destinationLattitude=point[0],
                     destinationLongitude=point[1],
                 )
-                if dis < 150:
+                if dis < 300:
                     break
                 await sleep(0.1)
         target.pop()
         target.reverse()
         for i, tar in enumerate(target):
-            ahl = 200
             new_target = GPSCoordinate(lat=tar[0], lon=tar[1], ahl=ahl)
             await uav.driver._send_fly_to_target_signal_single(uav, new_target)
             while True:
@@ -847,10 +843,44 @@ class SkybrushServer(DaemonApp):
                     destinationLattitude=tar[0],
                     destinationLongitude=tar[1],
                 )
-                if distance < 150:
+                if distance < 250:
                     break
                 await sleep(0.1)
-        await uav.driver._send_auto_mode_single(uav)
+        # await uav.driver._send_auto_mode_single(uav)
+
+    def send_message_target(
+        self, lat: float, lon: float, in_response_to: Optional[FlockwaveMessage] = None
+    ):
+        coords = {"lat": lat, "lon": lon}
+        body = {"coords": coords, "type": "X-TARGET-CNF"}
+        response = self.message_hub.create_response_or_notification(
+            body=body, in_response_to=in_response_to
+        )
+        print(response.body)
+        return response
+
+    async def fetch_target(self, uav: UAV):
+        from .VTOL import gps_bearing
+        from .socket.globalVariable import update_target_confirmation
+
+        while True:
+            tlat, tlon = uav.gimbal.get_target_coords()
+            [_, bearing] = gps_bearing(
+                homeLattitude=uav.status.position.lat,
+                homeLongitude=uav.status.position.lon,
+                destinationLattitude=tlat,
+                destinationLongitude=tlon,
+            )
+            print(f"bearing: {bearing}", end="\r")
+            if 85 <= bearing <= 90:
+                update_target_confirmation(tlat, tlon)
+                # X-TARGET-CNF
+                await self.message_hub.send_message(
+                    self.send_message_target(tlat, tlon)
+                )
+                print(bearing)
+                break
+            await sleep(0.1)
 
     async def vtol_swarm(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
@@ -878,7 +908,14 @@ class SkybrushServer(DaemonApp):
                 return response
             await uav.driver._send_guided_mode_single(uav)
             self.run_in_background(self.simple_go_to, res_latlon, uav)
+            self.run_in_background(self.fetch_target, uav)
             result = "success"
+
+        # if msg == "target":
+        #     uav = self.find_uav_by_id(uav_id)
+        #     target = parameters.pop("coord")
+        #     if uav:
+        #         return True
 
         if msg == "start_capture":
             from .cameraActions import start
@@ -946,8 +983,7 @@ class SkybrushServer(DaemonApp):
             for id in ids:
                 uav = self.find_uav_by_id(id)
                 if uav:
-                    await uav.driver._skip_waypoint(uav, skip)
-            result = True
+                    result = await uav.driver._skip_waypoint(uav, skip)
 
         if msg == "download":
             from .socket.globalVariable import (
@@ -968,7 +1004,6 @@ class SkybrushServer(DaemonApp):
                         manager = AutoMissionManager.for_uav(uav)
                         status = await manager.get_automission_areas()
                         update_mission(status)
-                        print(status)
                     print(uavid)
             mission = get_mission()
             update_mission_index()

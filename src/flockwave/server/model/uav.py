@@ -1370,7 +1370,7 @@ class UAVDriver(Generic[TUAV], metaclass=ABCMeta):
         # to support low-power mode
         raise NotSupportedError
 
-    def _skip_waypoint(self, uav: TUAV, *, skip_point=int) -> bool:
+    def _skip_waypoint(self, uav: TUAV, *, skip_point: int) -> bool:
         """Asks the driver to request a single UAV to switch to low-power mode.
 
         May return an awaitable if sending the request takes a longer time.
