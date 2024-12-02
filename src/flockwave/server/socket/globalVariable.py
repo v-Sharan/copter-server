@@ -15,12 +15,12 @@ removed_uav_grid_file_name = []
 removed_uav_grid_path_length = []
 gimbal_target = []
 mission = []
-mission_index = 0
+mission_index: int = 0
 alts: dict[int, int] = {
     5: 200,
     7: 210,
-    3: 200,
-    12: 300,
+    14: 220,
+    # 12: 300,
     # 1: 100,
     # 2: 110,
     # 3: 120,
@@ -43,7 +43,7 @@ alts: dict[int, int] = {
     # 25: 290,
 }
 
-drone = {5: 1, 7: 2}
+drone = {5: 1, 7: 2, 14: 3}
 
 past_distance: int | float = 0.0
 plat: float = 0.0

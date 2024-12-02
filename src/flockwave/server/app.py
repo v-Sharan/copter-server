@@ -818,7 +818,7 @@ class SkybrushServer(DaemonApp):
 
         print(uav.id)
         ahl = alts[int(uav.id)]
-        for i, point in enumerate(target):
+        for _, point in enumerate(target):
             new_target = GPSCoordinate(lat=point[0], lon=point[1], ahl=ahl)
             await uav.driver._send_fly_to_target_signal_single(uav, new_target)
             while True:
@@ -828,24 +828,25 @@ class SkybrushServer(DaemonApp):
                     destinationLattitude=point[0],
                     destinationLongitude=point[1],
                 )
+                print(dis)
                 if dis < 300:
                     break
                 await sleep(0.1)
-        target.pop()
-        target.reverse()
-        for i, tar in enumerate(target):
-            new_target = GPSCoordinate(lat=tar[0], lon=tar[1], ahl=ahl)
-            await uav.driver._send_fly_to_target_signal_single(uav, new_target)
-            while True:
-                [distance, _] = gps_bearing(
-                    homeLattitude=uav.status.position.lat,
-                    homeLongitude=uav.status.position.lon,
-                    destinationLattitude=tar[0],
-                    destinationLongitude=tar[1],
-                )
-                if distance < 250:
-                    break
-                await sleep(0.1)
+        # target.pop()
+        # target.reverse()
+        # for i, tar in enumerate(target):
+        #     new_target = GPSCoordinate(lat=tar[0], lon=tar[1], ahl=ahl)
+        #     await uav.driver._send_fly_to_target_signal_single(uav, new_target)
+        #     while True:
+        #         [distance, _] = gps_bearing(
+        #             homeLattitude=uav.status.position.lat,
+        #             homeLongitude=uav.status.position.lon,
+        #             destinationLattitude=tar[0],
+        #             destinationLongitude=tar[1],
+        #         )
+        #         if distance < 250:
+        #             break
+        #         await sleep(0.1)
         # await uav.driver._send_auto_mode_single(uav)
 
     def send_message_target(
@@ -871,7 +872,7 @@ class SkybrushServer(DaemonApp):
                 destinationLattitude=tlat,
                 destinationLongitude=tlon,
             )
-            print(f"bearing: {bearing}", end="\r")
+            print(f"bearing: {bearing}")
             if 85 <= bearing <= 90:
                 update_target_confirmation(tlat, tlon)
                 # X-TARGET-CNF
@@ -908,7 +909,7 @@ class SkybrushServer(DaemonApp):
                 return response
             await uav.driver._send_guided_mode_single(uav)
             self.run_in_background(self.simple_go_to, res_latlon, uav)
-            self.run_in_background(self.fetch_target, uav)
+            # self.run_in_background(self.fetch_target, uav)
             result = "success"
 
         # if msg == "target":
