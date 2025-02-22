@@ -704,6 +704,8 @@ class MAVLinkNetwork:
             "V2_EXTENSION": self._handle_message_v2_extension,
             "VFR_HUD": self._vfr_hud,
             "WIND": self._wind,
+            "MISSION_STRIKE": nop,
+            "RPM": self._handle_print_msg,
         }
 
         autopilot_component_id = MAVComponent.AUTOPILOT1
@@ -806,6 +808,11 @@ class MAVLinkNetwork:
         uav = self._find_uav_from_message(message, address)
         if uav:
             uav.handle_vfr_hud(message)
+
+    def _handle_print_msg(
+        self, message: MAVLinkMessage, *, connection_id: str, address: Any
+    ):
+        print(message)
 
     def _wind(self, message: MAVLinkMessage, *, connection_id: str, address: Any):
         uav = self._find_uav_from_message(message, address)

@@ -16,12 +16,17 @@ async def main(
     selected_turn: str,
     numOfDrones: int,
     mission: list[float],
+    landingMission: list[float],
     uavs: dict[str, UAV],
 ) -> bool:
     if len(mission) > 0:
         download_mission_kml(
             "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml",
             mission,
+        )
+        download_mission_kml(
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Reverse-Mission.kml",
+            landingMission,
         )
         if selected_turn == "left":
             await VPL(numOfDrones, uavs)

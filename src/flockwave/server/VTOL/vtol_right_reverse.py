@@ -1,12 +1,14 @@
 import math
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 from scipy import interpolate
+import simplekml
 import xml.etree.ElementTree as ET
 import csv
+import os
 import math
 from scipy import interpolate
-from .mission_basic_1 import main as MB
-from ..model.uav import UAV
-from .Vtol_left_reverse import VTOL_left_reverse
 
 
 def destination_location(homeLattitude, homeLongitude, distance, bearing):
@@ -54,6 +56,28 @@ def gps_bearing(
     bearingDegrees = bearing * (180 / math.pi)
     out = [distance, bearingDegrees]
     return out
+
+
+def extract_data_from_kml(kml_file_path):
+    # Open the KML file
+    kml = simplekml.Kml()
+    kml.open(kml_file_path)
+
+    # Access features in the KML file
+    for feature in kml.features():
+        # Check if the feature is a placemark
+        if isinstance(feature, simplekml.Placemark):
+            placemark = feature
+            # Extract placemark data
+            name = placemark.name
+            description = placemark.description
+            coordinates = (
+                placemark.geometry.coords
+            )  # Coordinates in (longitude, latitude) format
+            print("Name:", name)
+            print("Description:", description)
+            print("Coordinates:", coordinates)
+            print("----------------------------------")
 
 
 def kml_read(kml_file_path):
@@ -111,7 +135,7 @@ def cartToGeo(origin, endDistance, cartLocation):
 
 
 def generate_XY_Positions(numOfDrones, x, y, origin):
-    endDistance = 10000
+    endDistance = 100000
     Initial_x, Initial_y = x, y
     XY_values = []
     lat, lon = cartToGeo(origin, endDistance, [0, 0])
@@ -124,18 +148,15 @@ def generate_XY_Positions(numOfDrones, x, y, origin):
     return XY_values
 
 
-async def main(Drones: int, uavs: dict[str, UAV]) -> None:
-
+def VTOL_right_reverse(numOfDrones):
     result = kml_read(
-        "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml"
+        "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Reverse-Mission.kml"
     )
-
-    numOfDrones = Drones
 
     bearing = 0
     prev_bearing = 0
 
-    x = -60
+    x = 0
     y = -60
 
     lat_lons = [[] for _ in range(20)]
@@ -143,21 +164,24 @@ async def main(Drones: int, uavs: dict[str, UAV]) -> None:
     prev_bearing = abs(
         gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
     )
-
-    flag = 0
-
+    print("prevbearrrrrrrrrrrrrr", prev_bearing)
     if prev_bearing >= -30 and prev_bearing <= 30:
+        x = -60
+        y = 0
+    elif prev_bearing >= 150 and prev_bearing <= 210:
         x = 60
         y = 0
-    elif prev_bearing >= -210 and prev_bearing <= -150:
-        x = 60
-        y = -60
     elif prev_bearing >= -125 and prev_bearing <= -50:
-        x = 0
-        y = 60
+        x = 60
+        y = 0
     elif prev_bearing >= 50 and prev_bearing <= 125:
         x = 0
-        y = -60
+        y = 60
+
+    print("xxxxxxxxxxxxxxxxxxxxxYYYYYYYYY", x, y)
+
+    flag = 0
+    print(result)
 
     for index in range(len(result) - 1):
         bearing = gps_bearing(
@@ -166,13 +190,14 @@ async def main(Drones: int, uavs: dict[str, UAV]) -> None:
             result[index + 1][0],
             result[index + 1][1],
         )[1]
+
         if (
             prev_bearing >= -30
             and prev_bearing <= 30
             and bearing >= 50
             and bearing <= 125
         ):
-            x = 60
+            x = -60
             y = 60
         elif (
             prev_bearing >= 50
@@ -181,14 +206,14 @@ async def main(Drones: int, uavs: dict[str, UAV]) -> None:
             and bearing <= 210
         ):
             x = 60
-            y = -60
+            y = 60
         elif (
             prev_bearing >= 150
             and prev_bearing <= 210
-            and bearing >= 50
-            and bearing <= 125
+            and bearing >= -125
+            and bearing <= -50
         ):
-            x = -60
+            x = 60
             y = -60
         elif (
             prev_bearing >= 50
@@ -199,41 +224,34 @@ async def main(Drones: int, uavs: dict[str, UAV]) -> None:
             x = 60
             y = -60
         elif (
-            prev_bearing >= -30
-            and prev_bearing <= 30
-            and bearing >= -125
-            and bearing <= -50
-        ):
-            x = 60
-            y = 60
-        elif (
             prev_bearing >= -125
             and prev_bearing <= -50
-            and bearing >= -210
-            and bearing <= -150
-        ):
-            x = -60
-            y = 60
-        elif (
-            prev_bearing >= -210
-            and prev_bearing <= -150
-            and bearing >= 50
-            and bearing <= 125
+            and bearing >= -30
+            and bearing <= 30
         ):
             x = -60
             y = -60
         elif (
-            prev_bearing >= -125
-            and prev_bearing <= -50
-            and bearing >= 150
-            and bearing <= 215
+            prev_bearing >= -210
+            and prev_bearing <= -150
+            and bearing >= -125
+            and bearing <= -50
         ):
-            x = -60
+            x = 60
+            y = -60
+        elif (
+            prev_bearing >= 50
+            and prev_bearing <= 125
+            and bearing >= -210
+            and bearing <= -125
+        ):
+            x = 60
             y = 60
         prev_bearing = bearing
 
         res = generate_XY_Positions(numOfDrones, x, y, result[index])
-        flag = 1
+        print("Resultttttttttttttt", res)
+        flag += 1
         for i in range(len(res)):
             lat_lons[i].append(res[i])
 
@@ -245,20 +263,17 @@ async def main(Drones: int, uavs: dict[str, UAV]) -> None:
     )[1]
 
     if bearing >= -30 and bearing <= 30:
-        x = 60
-        y = 0
-    elif bearing >= -210 and bearing <= -150:
-        x = -60
-        y = 0
-    elif bearing >= -125 and bearing <= -50:
         x = -60
         y = 0
     elif bearing >= 50 and bearing <= 125:
         x = 0
+        y = 60
+    elif bearing >= -125 and bearing <= -50:
+        x = 0
         y = -60
-    elif bearing >= 130 and bearing >= 210:
-        x = 60
-        y = -60
+    elif bearing >= -210 and bearing <= -130:
+        x = 120
+        y = 120
 
     res = generate_XY_Positions(numOfDrones, x, y, result[len(result) - 1])
 
@@ -267,7 +282,7 @@ async def main(Drones: int, uavs: dict[str, UAV]) -> None:
 
     for i in range(numOfDrones):
         with open(
-            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-{}.csv".format(
                 i + 1
             ),
             "w",
@@ -275,21 +290,4 @@ async def main(Drones: int, uavs: dict[str, UAV]) -> None:
         ) as f:
             csvwriter = csv.writer(f)
             for j in range(len(lat_lons[i])):
-
                 csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
-
-    VTOL_left_reverse(numOfDrones)
-
-    # for i in range(numOfDrones):
-    #     lat_lons[i] = lat_lons[i][::-1]
-    #     with open(
-    #         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-{}.csv".format(
-    #             i + 1
-    #         ),
-    #         "w",
-    #         newline="",
-    #     ) as f:
-    #         csvwriter = csv.writer(f)
-    #         for j in range(len(lat_lons[i])):
-    #             csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
-    await MB(uavs)

@@ -64,6 +64,7 @@ class MAVCommand(IntEnum):
     NAV_LAND = 21
     NAV_TAKEOFF = 22
     DO_SET_MODE = 176
+    DO_CHANGE_SPEED = 178
     DO_REPOSITION = 192
     DO_MOTOR_TEST = 209
     PREFLIGHT_CALIBRATION = 241
@@ -78,6 +79,7 @@ class MAVCommand(IntEnum):
     NAV_VTOL_LAND = 85
     NAV_LOITER_UNLIM = 17
     MAV_CMD_DO_JUMP = 177
+    MAV_CMD_STRIKE = 31000
 
     NAV_FENCE_RETURN_POINT = 5000
     NAV_FENCE_POLYGON_VERTEX_INCLUSION = 5001
@@ -176,6 +178,8 @@ class MAVMessageType(IntEnum):
     AUTOPILOT_VERSION = 148
     MAG_CAL_PROGRESS = 191  # ArduPilot-specific
     MAG_CAL_REPORT = 192
+
+    AIRSPEED = 74
 
 
 class MAVMissionResult(IntEnum):

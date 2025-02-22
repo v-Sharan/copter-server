@@ -16,56 +16,78 @@ removed_uav_grid_path_length = []
 gimbal_target = []
 mission = []
 mission_index: int = 0
+speed_match = False
+
+vtol_takeoff_height = {
+    1: 20,
+    2: 20,
+    20: 40,
+    22: 35,
+    24: 30,
+    # 5: 30,
+    # 6: 35,
+    # 7: 40,
+    # 8: 45,
+    # 10: 30,
+    # 11: 35,
+    # 14: 40,
+    # 15: 45,
+    # 20: 30,
+    # 22: 35,
+    # 24: 40,
+    # 25: 45,
+}
 alts: dict[int, int] = {
-    5: 200,
-    7: 210,
-    14: 220,
-    # 12: 300,
-    # 1: 100,
-    # 2: 110,
-    # 3: 120,
-    # 5: 100,
-    # 6: 140,
-    # 7: 150,
-    # 8: 160,
-    # 10: 110,
-    # 11: 180,
-    # 12: 190,
-    # 13: 200,
-    # 14: 210,
-    # 15: 220,
-    # 16: 230,
-    # 18: 240,
-    # 20: 250,
-    # 22: 260,
-    # 23: 270,
-    # 24: 280,
-    # 25: 290,
+    20: 100,
+    22: 110,
+    24: 120,
+    1: 100,
+    2: 110,
+    # 5: 210,
+    # 6: 200,
+    # 7: 190,
+    # 8: 180,
+    # 10: 170,
+    # 11: 160,
+    # 14: 150,
+    # 15: 140,
+    # 20: 130,
+    # 22: 120,
+    # 24: 110,
+    # 25: 100,
 }
 
-drone = {5: 1, 7: 2, 14: 3}
+drone = {
+    20: 1,
+    1: 1,
+    2: 2,
+    22: 2,
+    24: 3,
+    8: 4,
+    10: 5,
+    11: 6,
+    14: 7,
+    15: 8,
+    # 20: 9,
+    # 22: 10,
+    # 24: 11,
+    # 25: 12,
+}
+
+vtol_rtl_height = {20: 50, 22: 60, 24: 70, 1: 30, 2: 30}
+# vtol_takeoff_height = {7: 50, 14: 45, 22: 40, 24: 35, 25: 30}
+# alts: dict[int, int] = {7: 100, 14: 110, 22: 120, 24: 130, 25: 140}
+
+# drone = {7: 1, 14: 2, 22: 3, 24: 4, 25: 5}
 
 past_distance: int | float = 0.0
 plat: float = 0.0
 plon: float = 0.0
 
-# batch_wise_location = {
-#     ("01", "02", "03", "05", "06"): (13.21, 10),
-#     ("07", "08", "10", "11", "12"): (12.22, 10),
-#     ("13", "14", "15", "16", "18"): (12.22, 10),
-#     ("20", "22", "23", "24", "25"): (12.22, 10),
-# }
-
-
-# def find_value_in_dict(value_to_find: str) -> tuple[float] | None:
-#     global batch_wise_location
-#     locations = batch_wise_location
-#     for key, values in locations.items():
-#         if value_to_find in key:
-#             return values
-#     return None
 trail: bool = False
 target_confirmation = GPSCoordinate(lat=0, lon=0, amsl=None, ahl=None, agl=None)
+
+airspeed_failure_ms = 26
 
 
 def get_target_confirm():

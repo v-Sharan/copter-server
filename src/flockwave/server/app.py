@@ -88,6 +88,7 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec]] = {
         "send_return_to_home_signal",
         {"transport": TransportOptions.from_json},
     ),
+    "X-UAV-QLOITER": ("send_loiter_mode", {"transport": TransportOptions.from_json}),
     "X-UAV-GUIDED": ("send_guided_mode", {"transport": TransportOptions.from_json}),
     "X-UAV-AUTO": ("send_auto_mode", {"transport": TransportOptions.from_json}),
     "UAV-SIGNAL": (
@@ -105,8 +106,8 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec]] = {
         "resume_from_low_power_mode",
         {"transport": TransportOptions.from_json},
     ),
-    "X-VTOL-UPLOAD-MISSION": ("vtol_upload_mission", None),
-    # "X-UAV-START-CAPTURE": ("start_capture_cam", None),
+    # "X-VTOL-UPLOAD-MISSION": ("vtol_upload_mission", None),
+    # "X-UAV-ENGINE-START": ("engine_start", None),
     # "X-UAV-STOP-CAPTURE": ("stop_capture_cam", None),
 }
 
@@ -453,6 +454,7 @@ class SkybrushServer(DaemonApp):
             uav = self.find_uav_by_id(uav_id, response)
             if uav:
                 statuses[uav_id] = uav.status
+
         return response
 
     def create_send_reqcontrol(self, in_response_to: Optional[FlockwaveMessage] = None):
@@ -487,7 +489,7 @@ class SkybrushServer(DaemonApp):
             body=body, in_response_to=in_response_to
         )
         statuses["Data"] = "Data 04"
-        print(response.body)
+        # print(response.body)
         return response
 
     async def disconnect_client(
@@ -816,7 +818,7 @@ class SkybrushServer(DaemonApp):
         from .VTOL import gps_bearing
         from .socket.globalVariable import alts
 
-        print(uav.id)
+        # print(uav.id)
         ahl = alts[int(uav.id)]
         for _, point in enumerate(target):
             new_target = GPSCoordinate(lat=point[0], lon=point[1], ahl=ahl)
@@ -828,7 +830,7 @@ class SkybrushServer(DaemonApp):
                     destinationLattitude=point[0],
                     destinationLongitude=point[1],
                 )
-                print(dis)
+                # print(dis)
                 if dis < 300:
                     break
                 await sleep(0.1)
@@ -857,7 +859,7 @@ class SkybrushServer(DaemonApp):
         response = self.message_hub.create_response_or_notification(
             body=body, in_response_to=in_response_to
         )
-        print(response.body)
+        # print(response.body)
         return response
 
     async def fetch_target(self, uav: UAV):
@@ -872,14 +874,14 @@ class SkybrushServer(DaemonApp):
                 destinationLattitude=tlat,
                 destinationLongitude=tlon,
             )
-            print(f"bearing: {bearing}")
+            # print(f"bearing: {bearing}")
             if 85 <= bearing <= 90:
                 update_target_confirmation(tlat, tlon)
                 # X-TARGET-CNF
                 await self.message_hub.send_message(
                     self.send_message_target(tlat, tlon)
                 )
-                print(bearing)
+                # print(bearing)
                 break
             await sleep(0.1)
 
@@ -891,7 +893,7 @@ class SkybrushServer(DaemonApp):
         )
         parameters = dict(message.body)
         msg = parameters["message"].lower()
-        ids = parameters.pop("ids")
+        ids = parameters.pop("ids", ())
         uavid = parameters.pop("uavid")
         selectedIds = parameters.pop("selected")
 
@@ -909,14 +911,8 @@ class SkybrushServer(DaemonApp):
                 return response
             await uav.driver._send_guided_mode_single(uav)
             self.run_in_background(self.simple_go_to, res_latlon, uav)
-            # self.run_in_background(self.fetch_target, uav)
+            self.run_in_background(self.fetch_target, uav)
             result = "success"
-
-        # if msg == "target":
-        #     uav = self.find_uav_by_id(uav_id)
-        #     target = parameters.pop("coord")
-        #     if uav:
-        #         return True
 
         if msg == "start_capture":
             from .cameraActions import start
@@ -932,14 +928,14 @@ class SkybrushServer(DaemonApp):
             lat = float(parameters.get("lat"))
             lon = float(parameters.get("lon"))
             uav = self.find_uav_by_id(uavid)
-            if uav is None:
-                print("No Such UAV")
-                return
-            print(
-                uav.status.position.amsl,
-                uav.status.wind_direction,
-                uav.status.wind_speed,
-            )
+            # if uav is None:
+            #     print("No Such UAV")
+            #     return
+            # print(
+            #     uav.status.position.amsl,
+            #     uav.status.wind_direction,
+            #     uav.status.wind_speed,
+            # )
 
         if msg == "uploadmission":
             from .VTOL import Dynamic_main, main, GridFormation
@@ -964,24 +960,26 @@ class SkybrushServer(DaemonApp):
             )
 
             if not grid:
-                print("Grid", grid)
+                # print("Grid", grid)
                 return
 
             if mission == "dynamic type":
                 result = await Dynamic_main(uavs)
             else:
                 initial_mission = parameters.pop("mission")
+                landingMission = parameters.pop("landingMission")
                 downloadedMission = initial_mission if len(initial_mission) != 0 else []
                 result = await main(
                     parameters.pop("turn"),
                     int(parameters.pop("numofdrone")),
                     downloadedMission,
+                    landingMission,
                     uavs,
                 )
 
         if msg == "skipwaypoint":
             skip = int(parameters.pop("skip"))
-            for id in ids:
+            for id in selectedIds:
                 uav = self.find_uav_by_id(id)
                 if uav:
                     result = await uav.driver._skip_waypoint(uav, skip)
@@ -1022,7 +1020,9 @@ class SkybrushServer(DaemonApp):
             uavs = {}
 
             for uavid in selectedIds:
-                uavs[uavid] = self.find_uav_by_id(uavid)
+                uav = self.find_uav_by_id(uav_id)
+                if uav:
+                    uavs.append(uav)
 
             result = await SplitMission(
                 center_latlon=parameters.pop("center_latlon"),
@@ -1177,10 +1177,10 @@ class SkybrushServer(DaemonApp):
         message_type = parameters.pop("type")
         uav_ids: Sequence[str] = parameters.pop("ids", ())
         transport: Any = parameters.get("transport")
-        if message_type == "UAV-TAKEOFF":
-            from .socket.globalVariable import update_Takeoff_Alt
+        # if message_type == "UAV-TAKEOFF":
+        #     from .socket.globalVariable import update_Takeoff_Alt
 
-            update_Takeoff_Alt(int(parameters.pop("alt")))
+        #     update_Takeoff_Alt(int(parameters.pop("alt")))
 
         # Sort the UAVs being targeted by drivers. If `transport` is a
         # TransportOptions object and it indicates that we should ignore the
@@ -1424,7 +1424,7 @@ class SkybrushServer(DaemonApp):
 
         # Create an object that can be used to get hold of commonly used
         # directories within the app
-        self.dirs = AppDirs("Skybrush Server", "CollMot Robotics")
+        self.dirs = AppDirs("Dhaksha Live", "Fixedwing VTOL")
 
         # Create an object to hold information about all the registered
         # communication channel types that the server can handle
@@ -1927,6 +1927,7 @@ async def handle_single_uav_operations(
     "X-UAV-socket",
     "X-UAV-MISSION",
     "X-UAV-AUTO",
+    "X-UAV-QLOITER",
 )
 async def handle_multi_uav_operations(
     message: FlockwaveMessage, sender: Client, hub: MessageHub

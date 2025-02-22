@@ -702,6 +702,18 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         ):
             raise RuntimeError("Failed to request low-power mode from autopilot")
 
+    async def _send_speed_correction(self, uav: "MAVLinkUAV", speed_mps: int) -> None:
+        # Effectively the same as shutdown, but without the attempt to stop the
+        # motors (so drones where the motors are running will not be affected)
+        if not await self.send_command_long(
+            uav, MAVCommand.DO_CHANGE_SPEED, param2=speed_mps, param3=-1
+        ):
+            raise RuntimeError(
+                "Failed to change the speed of uav {} for airspeed at {}".format(
+                    int(uav.id), speed_mps
+                )
+            )
+
     async def _skip_waypoint(self, uav: "MAVLinkUAV", skip_point: int) -> bool:
         # Effectively the same as shutdown, but without the attempt to stop the
         # motors (so drones where the motors are running will not be affected)
@@ -741,6 +753,20 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         # This is not supported by standard MAVLink so it relies on a custom
         # protocol extension
         channel = transport_options_to_channel(transport)
+        await self.broadcast_command_long_with_retries(
+            MAVCommand.PREFLIGHT_REBOOT_SHUTDOWN,
+            param1=127,  # resume autopilot
+            channel=channel,
+        )
+        # TODO(ntamas): shall we notify all the UAVs that they are about to
+        # be resumed (i.e. _notify_rebooted_by_us())?
+
+    async def _engine_start_signal(
+        self, *, transport: Optional[TransportOptions] = None
+    ) -> None:
+        # This is not supported by standard MAVLink so it relies on a custom
+        # protocol extension
+        self.send_command_long()
         await self.broadcast_command_long_with_retries(
             MAVCommand.PREFLIGHT_REBOOT_SHUTDOWN,
             param1=127,  # resume autopilot
@@ -810,12 +836,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_landing_signal_single(
         self, uav: "MAVLinkUAV", *, transport=None
     ) -> None:
-        channel = transport_options_to_channel(transport)
-        success = await self.send_command_long(
-            uav, MAVCommand.NAV_LAND, channel=channel
-        )
-        if not success:
-            raise RuntimeError("Landing command failed")
+        await uav.set_mode("qland")
 
     async def _send_light_or_sound_emission_signal_broadcast(
         self, signals: list[str], duration: int, *, transport=None
@@ -916,6 +937,26 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
             channel=channel,
         )
 
+    async def _send_qloiter_mode_broadcast(
+        self, uav: "MAVLinkUAV", *, transport=None
+    ) -> None:
+        channel = transport_options_to_channel(transport)
+
+        # TODO(ntamas): HACK HACK HACK This won't work for a PixHawk as we are
+        # hardcoding the ArduCopter mode numbers here. If we wanted to do this
+        # properly, we would not be able to broadcast because different UAVs
+        # may have different autopilots and the mode numbers might be different.
+        base_mode, mode, submode = MAVModeFlag.CUSTOM_MODE_ENABLED, 15, 0
+        # base_mode, mode, submode = MAVModeFlag.CUSTOM_MODE_ENABLED, 16, 0
+
+        await self.broadcast_command_long_with_retries(
+            MAVCommand.DO_SET_MODE,
+            param1=float(base_mode),
+            param2=float(mode),
+            param3=float(submode),
+            channel=channel,
+        )
+
     async def _send_auto_mode_broadcast(
         self, uav: "MAVLinkUAV", *, transport=None
     ) -> None:
@@ -996,7 +1037,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_takeoff_signal_single(
         self, uav: "MAVLinkUAV", *, scheduled: bool = False, transport=None
     ) -> None:
-        from flockwave.server.socket.globalVariable import getTakeoffAlt
+        from flockwave.server.socket.globalVariable import vtol_takeoff_height
 
         if scheduled:
             # Ignore this; scheduled takeoffs are managed by the ScheduledTakeoffManager
@@ -1011,12 +1052,10 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         # Wait a bit to give the autopilot some time to start the motors, just
         # in case. Not sure whether this is needed.
         await sleep(0.1)
-        alt = 2.5
-        rel = getTakeoffAlt()
-        if rel:
-            alt = rel
+        alt = vtol_takeoff_height[int(uav.id)]
 
         # Send the takeoff command
+        # await uav.set_mode(15)
         await uav.takeoff_to_relative_altitude(alt, channel=channel)
 
     async def _start_capture_cam_signal(
@@ -1401,6 +1440,7 @@ class MAVLinkUAV(UAVBase):
             "current": 2,
             "autocontinue": 0,
         }
+        # message = spec.mission_strike(**params)
         message = spec.mission_item_int(**params)
         # There is usually no confirmation for the guided mode command, unless
         # the drone streams us the POSITION_TARGET_GLOBAL_INT message, which it
@@ -1574,6 +1614,7 @@ class MAVLinkUAV(UAVBase):
 
     def handle_vfr_hud(self, message: MAVLinkMessage):
         self.update_status(throttle=message.throttle, airspeed=message.airspeed)
+        self._store_message(message)
 
     def handle_update_wind(self, message: MAVLinkMessage):
         self.update_status(wind_speed=message.speed)
@@ -1667,6 +1708,8 @@ class MAVLinkUAV(UAVBase):
 
     def handle_message_global_position_int(self, message: MAVLinkMessage):
         # TODO(ntamas): reboot detection with time_boot_ms
+
+        self._store_message(message)
 
         if abs(message.lat) <= 900000000:
             self._position.lat = message.lat / 1e7
@@ -2441,6 +2484,16 @@ class MAVLinkUAV(UAVBase):
         """
         heartbeat = self.get_last_message(MAVMessageType.HEARTBEAT)
         sys_status = self.get_last_message(MAVMessageType.SYS_STATUS)
+        airspeed = self.get_last_message(MAVMessageType.AIRSPEED)
+        position = self.get_last_message(MAVMessageType.GLOBAL_POSITION_INT)
+
+        from ...socket.globalVariable import airspeed_failure_ms
+
+        # airspeed_failure = (
+        #     position.relative_alt / 1e3
+        # ) > 50 and airspeed.airspeed < airspeed_failure_ms
+        airspeed_failure = False
+
         if not heartbeat or not sys_status:
             return
 
@@ -2580,6 +2633,7 @@ class MAVLinkUAV(UAVBase):
             # active, critical, emergency, poweroff, termination)
             FlockwaveErrorCode.RETURN_TO_HOME: is_returning_home
             and heartbeat.system_status > MAVState.STANDBY,
+            FlockwaveErrorCode.LOW_AIRSPEED: airspeed_failure,
         }
 
         # Clear the collected prearm failure messages if the heartbeat and/or
