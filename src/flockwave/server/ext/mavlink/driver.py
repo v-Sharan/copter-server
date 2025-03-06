@@ -456,6 +456,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
 
         Parameters:
             target: the UAV to send the command to
+            command_id: MAV_CMD command id
             param1: the first parameter of the command
             param2: the second parameter of the command
             param3: the third parameter of the command

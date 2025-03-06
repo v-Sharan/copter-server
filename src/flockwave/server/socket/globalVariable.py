@@ -17,10 +17,14 @@ gimbal_target = []
 mission = []
 mission_index: int = 0
 speed_match = False
+reached_height = False
 
 vtol_takeoff_height = {
-    1: 20,
-    2: 20,
+    1: 30,
+    2: 30,
+    3: 30,
+    4: 30,
+    5: 30,
     20: 40,
     22: 35,
     24: 30,
@@ -41,8 +45,11 @@ alts: dict[int, int] = {
     20: 100,
     22: 110,
     24: 120,
-    1: 100,
-    2: 110,
+    1: 300,
+    2: 310,
+    3: 300,
+    4: 310,
+    5: 300,
     # 5: 210,
     # 6: 200,
     # 7: 190,
@@ -61,6 +68,9 @@ drone = {
     20: 1,
     1: 1,
     2: 2,
+    3: 3,
+    4: 4,
+    5: 5,
     22: 2,
     24: 3,
     8: 4,
@@ -73,6 +83,7 @@ drone = {
     # 24: 11,
     # 25: 12,
 }
+
 
 vtol_rtl_height = {20: 50, 22: 60, 24: 70, 1: 30, 2: 30}
 # vtol_takeoff_height = {7: 50, 14: 45, 22: 40, 24: 35, 25: 30}
@@ -89,6 +100,9 @@ target_confirmation = GPSCoordinate(lat=0, lon=0, amsl=None, ahl=None, agl=None)
 
 airspeed_failure_ms = 26
 
+def changeReachHeight(value:bool):
+    global  reached_height
+    reached_height = value
 
 def get_target_confirm():
     global target_confirmation

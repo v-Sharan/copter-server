@@ -21,6 +21,7 @@ class FlockwaveMessage(metaclass=ModelMeta):
 
     class __meta__:
         schema = get_message_schema()
+        # print(schema)
 
     def get_ids(self) -> Sequence[str]:
         """Returns the `"ids"` property of the message body, or an empty sequence

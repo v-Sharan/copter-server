@@ -22,6 +22,12 @@ def fetch_file_content(file_path):
         print('Error reading file:', error)
     return lines
 
+master_udp = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+adderss = {
+    1:('192.168.6.203',12002),2:('192.168.6.203',12008)
+}
+
 master_num=0
 #udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 #server_address1 = ('192.168.6.151', 12008)
@@ -765,36 +771,36 @@ def rtl_socket():
 
 def stop_socket():
     print("STOP>>>>>>>>>>>>")
-    global socket1,udp_socket,udp_socket2,server_address1,server_address2      
-    socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    global master_udp
     data = "stop"
-    '''
-    socket1.sendto(str(data).encode(), server_address11)
-    time.sleep(0.5)
-    socket2.sendto(str(data).encode(), server_address12)
-    time.sleep(0.5)
-    '''
-    socket3.sendto(str(data).encode(), server_address13)
-    time.sleep(0.5)
-    '''
-    socket4.sendto(str(data).encode(), server_address14)
-    time.sleep(0.5)
-    '''
-    socket5.sendto(str(data).encode(), server_address15)    
-    time.sleep(0.5)
-    '''
-    socket6.sendto(str(data).encode(), server_address16)
-    time.sleep(0.5)
+    master_udp.sendto(data.encode(), adderss.get(1))
 
-    socket7.sendto(str(data).encode(), server_address17)
-
-    time.sleep(0.5)
-    socket8.sendto(str(data).encode(), server_address18)
-    time.sleep(0.5)
-    socket9.sendto(str(data).encode(), server_address19)      
-    time.sleep(0.5)
-    '''
-    socket10.sendto(str(data).encode(), server_address20)
+    # socket1.sendto(str(data).encode(), server_address11)
+    # time.sleep(0.5)
+    # socket2.sendto(str(data).encode(), server_address12)
+    # time.sleep(0.5)
+    #
+    # socket3.sendto(str(data).encode(), server_address13)
+    # time.sleep(0.5)
+    #
+    # socket4.sendto(str(data).encode(), server_address14)
+    # time.sleep(0.5)
+    #
+    # socket5.sendto(str(data).encode(), server_address15)
+    # time.sleep(0.5)
+    #
+    # socket6.sendto(str(data).encode(), server_address16)
+    # time.sleep(0.5)
+    #
+    # socket7.sendto(str(data).encode(), server_address17)
+    #
+    # time.sleep(0.5)
+    # socket8.sendto(str(data).encode(), server_address18)
+    # time.sleep(0.5)
+    # socket9.sendto(str(data).encode(), server_address19)
+    # time.sleep(0.5)
+    #
+    # socket10.sendto(str(data).encode(), server_address20)
     return True
 
 def return_socket():
@@ -868,35 +874,36 @@ def specific_bot_goal_socket(drone_num,goal_num):
 
 def goal_socket(goal_num):     
     print("***Group goal*****!!!!!")
-    d="goal"+","+str(goal_num)
-    print("d",d)
-    '''
-    udp_socket.sendto(str(d).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(d).encode(), server_address2)
-    time.sleep(0.5)
-    '''
-    udp_socket3.sendto(str(d).encode(), server_address3)
-    time.sleep(0.5)
-    '''
-    udp_socket4.sendto(str(d).encode(), server_address4)
-    time.sleep(0.5)
-    '''
-    udp_socket5.sendto(str(d).encode(), server_address5)
-    time.sleep(0.5)
-    '''
-    udp_socket6.sendto(str(d).encode(), server_address6)
-    time.sleep(0.5)
-
-    udp_socket7.sendto(str(d).encode(), server_address7)
-
-    time.sleep(0.5)
-    udp_socket8.sendto(str(d).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(d).encode(), server_address9)
-    time.sleep(0.5)
-    '''
-    udp_socket10.sendto(str(d).encode(), server_address10)
+    for num in goal_num:
+        num.reverse()
+    data=str("goal"+","+str(goal_num))
+    print("d",data)
+    master_udp.sendto(data.encode(), adderss.get(2))
+    # udp_socket.sendto(str(d).encode(), server_address1)
+    # time.sleep(0.5)
+    # udp_socket2.sendto(str(d).encode(), server_address2)
+    # time.sleep(0.5)
+    #
+    # # udp_socket3.sendto(str(d).encode(), server_address3)
+    # # time.sleep(0.5)
+    # udp_socket4.sendto(str(d).encode(), server_address4)
+    # time.sleep(0.5)
+    #
+    # udp_socket5.sendto(str(d).encode(), server_address5)
+    # time.sleep(0.5)
+    #
+    # udp_socket6.sendto(str(d).encode(), server_address6)
+    # time.sleep(0.5)
+    #
+    # udp_socket7.sendto(str(d).encode(), server_address7)
+    #
+    # time.sleep(0.5)
+    # udp_socket8.sendto(str(d).encode(), server_address8)
+    # time.sleep(0.5)
+    # udp_socket9.sendto(str(d).encode(), server_address9)
+    # time.sleep(0.5)
+    #
+    # udp_socket10.sendto(str(d).encode(), server_address10)
     return True
     
 def master(master_num):             
@@ -1047,4 +1054,34 @@ def bot_remove(remove_uav_num):
     time.sleep(0.5)
     '''
     udp_socket10.sendto(str(data).encode(), server_address10)
+    return True
+
+def landing_mission_send(mission):
+    for num in mission:
+        num.reverse()
+    global master_udp
+    data = str('home,{}'.format(mission))
+    master_udp.sendto(data.encode(),adderss.get(2))
+    return True
+
+def navigate(center_latlon,gridspacing,coverage,ids):
+    global master_udp
+    latlng = str(str(center_latlon[0][1])+","+str(center_latlon[0][0]))
+    data = str('navigate'+','+str(latlng)+","+str(1)+","+str(gridspacing)+','+str(coverage))
+    print(data)
+    master_udp.sendto(data.encode(), adderss.get(2))
+    return True
+
+def loiter(center_latlon,direction):
+    global master_udp
+    s = str(str(center_latlon[0][1])+","+str(center_latlon[0][0]))
+    data = str('loiter pointer'+","+str(s)+','+str(direction))
+    print(data)
+    master_udp.sendto(data.encode(), adderss.get(2))
+    return True
+
+def skip_point(skip_waypoint):
+    global master_udp
+    data = str('skip'+','+str(skip_waypoint))
+    master_udp.sendto(data.encode(), adderss.get(2))
     return True

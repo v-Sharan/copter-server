@@ -885,6 +885,39 @@ class SkybrushServer(DaemonApp):
                 break
             await sleep(0.1)
 
+    async def settings_swarm(
+            self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
+    ) -> FlockwaveMessage:
+        response = self.message_hub.create_response_or_notification(
+            body={}, in_response_to=message
+        )
+        parameters = dict(message.body)
+        msg = parameters["message"].lower()
+        selectedIds = parameters.pop("selected")
+        speed = parameters.pop("speed")
+
+        if msg == 'speed':
+            for id in selectedIds:
+                uav = self.find_uav_by_id(id)
+                if uav:
+                    await uav.driver._send_speed_correction(uav, int(speed))
+
+        if msg == 'rad':
+            print(parameters)
+            rad = parameters.get("radius")
+            if parameters.get("direction").lower().startswith('a'):
+                rad = -rad
+            for id in selectedIds:
+                uav = self.find_uav_by_id(id)
+                if uav:
+                    print([uav],'WP_LOITER_RAD', int(rad))
+                    # uav.driver.set_parameter([uav],'WP_LOITER_RAD', int(rad))
+                    await uav.driver._set_parameter_single(uav,'WP_LOITER_RAD', int(rad))
+
+        response.body['message'] = 'set values to the UAV id {}'.format(parameters.get("id"))
+
+        return response
+
     async def vtol_swarm(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
     ) -> FlockwaveMessage:
@@ -1052,14 +1085,6 @@ class SkybrushServer(DaemonApp):
 
         return response
 
-    async def request_control_access(
-        self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
-    ) -> FlockwaveMessage:
-        response = self.message_hub.create_response_or_notification(
-            body={}, in_response_to=message
-        )
-        await self.message_hub.send_message(self.create_send_reqcontrol())
-        return response
 
     async def socket_response(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
@@ -1076,7 +1101,7 @@ class SkybrushServer(DaemonApp):
         msg = parameters["message"].lower()
 
         if msg == "master":
-            result = master(int(parameters["uav"]))
+            result = master(int(parameters.get("ids")[0]))
 
         if msg == "coverage":
             result = get_coverage_time()
@@ -1121,7 +1146,9 @@ class SkybrushServer(DaemonApp):
             result = specific_bot_goal_socket(parameters["uav"], parameters["goal"])
 
         if msg == "goal":
-            result = goal_socket(parameters["goal"])
+            stop_socket()
+            await sleep(2)
+            result = goal_socket(parameters.get("coords"))
 
         if msg == "home_goto":
             result = home_goto_socket()
@@ -1140,15 +1167,71 @@ class SkybrushServer(DaemonApp):
             result = mavlink_remove(int(parameters["uav"]))
 
         if msg == "add_link":
-            result = mavlink_add(int(parameters["uav"]))
+            result = mavlink_add(int(parameters.get("ids")[0]))
 
         if msg == "remove_uav":
-            result = bot_remove(int(parameters["uav"]))
+            result = bot_remove(int(parameters.get("ids")[0]))
+
+        if msg == 'landing':
+            stop_socket()
+            await sleep(2)
+            result = landing_mission_send(parameters.get('mission'))
+
+        if msg == 'navigate':
+            stop_socket()
+            await sleep(2)
+            center_latlon=parameters.get("coords")
+            gridSpacing=parameters.get("gridSpacing")
+            coverage=parameters.get("coverage")
+            ids = parameters.get("ids")
+            result = navigate(center_latlon,gridSpacing,coverage,ids)
+
+        if msg == 'loiter':
+            stop_socket()
+            await sleep(2)
+            center_latlon = parameters.get("coords")
+            direction = 1 if parameters.get("direction", "").lower().startswith('a') else -1
+            result = loiter(center_latlon, direction)
+
+        if msg == 'skip':
+            point = parameters.get("skip_waypoint")
+            result = skip_point(point)
 
         response.body["message"] = result
         response.body["method"] = msg
 
         return response
+
+    async def check_height(self,id):
+        uav = self.find_uav_by_id(id)
+        if uav:
+            while True:
+                ahl = uav.status.position.ahl
+                print(ahl)
+                if ahl > 29:
+                    from .socket.globalVariable import changeReachHeight
+                    changeReachHeight(True)
+                    break
+                await sleep(0.5)
+
+    async def send_guided_command(self,res,ids,speed):
+        while True:
+            from .socket.globalVariable import reached_height
+            if reached_height:
+                for i,id in enumerate(ids):
+                    from .socket.globalVariable import alts
+                    alt = alts[int(id)]
+                    uav = self.find_uav_by_id(id)
+                    coords = GPSCoordinate(lat=res[i][0],lon=res[i][1],ahl=alt)
+                    if uav:
+                        await uav.driver._send_fly_to_target_signal_single(uav,coords)
+                break
+            await sleep(0.5)
+        await sleep(5)
+        for i, id in enumerate(ids):
+            uav = self.find_uav_by_id(id)
+            if uav:
+                await uav.driver._send_speed_correction(uav,speed)
 
     async def dispatch_to_uavs(
         self, message: FlockwaveMessage, sender: Client
@@ -1178,9 +1261,19 @@ class SkybrushServer(DaemonApp):
         uav_ids: Sequence[str] = parameters.pop("ids", ())
         transport: Any = parameters.get("transport")
         # if message_type == "UAV-TAKEOFF":
+        #     print(parameters)
         #     from .socket.globalVariable import update_Takeoff_Alt
-
-        #     update_Takeoff_Alt(int(parameters.pop("alt")))
+        #
+        #     update_Takeoff_Alt(int(parameters.get("alt")))
+        print(message_type)
+        if (message_type == 'UAV-TAKEOFF'):
+            point = parameters.pop("alt")
+            speed = parameters.pop("speed")
+            from .VTOL.new_left import generate_XY_Positions
+            res = generate_XY_Positions(len(uav_ids),50,50,point)
+            print(res)
+            self.run_in_background(self.check_height,uav_ids[0])
+            self.run_in_background(self.send_guided_command,res,uav_ids,speed)
 
         # Sort the UAVs being targeted by drivers. If `transport` is a
         # TransportOptions object and it indicates that we should ignore the
@@ -1266,7 +1359,6 @@ class SkybrushServer(DaemonApp):
                             )
                         else:
                             response.add_result(uav.id, result)
-
         return response
 
     def find_uav_by_id(
@@ -1943,11 +2035,11 @@ async def handleVTOLSwarm(message: FlockwaveMessage, sender: Client, hub: Messag
     return await app.vtol_swarm(message, sender)
 
 
-@app.message_hub.on("X-REQ-CONTROL-ACCESS")
+@app.message_hub.on("X-SETTINGS")
 async def handleRequestControl(
     message: FlockwaveMessage, sender: Client, hub: MessageHub
 ):
-    return await app.request_control_access(message, sender)
+    return await app.settings_swarm(message, sender)
 
 
 @app.message_hub.on("X-Camera-MISSION")
