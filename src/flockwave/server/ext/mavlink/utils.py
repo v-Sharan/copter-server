@@ -146,6 +146,33 @@ def mavlink_nav_command_to_gps_coordinate(message: MAVLinkMessage) -> GPSCoordin
     else:
         raise ValueError(f"unknown coordinate frame: {message.frame}")
 
+def mavlink_nav_command_to_gps_coordinate_with_frame(message: MAVLinkMessage) -> dict[str, GPSCoordinate]:
+    """Creates a GPSCoordinate object from the parameters of a MAVLink
+    `MAV_CMD_NAV_...` command typically used in mission descriptions.
+
+    Parameters:
+        message: the MAVLink message with fields named `x`, `y` and `z`. It is
+            assumed (and not checked) that the message is a MAVLink command
+            of type `MAV_CMD_NAV_...`.
+    """
+    data = {}
+    if message.frame in (MAVFrame.GLOBAL, MAVFrame.GLOBAL_INT):
+        data["coords"] = GPSCoordinate(lat=message.x / 1e7, lon=message.y / 1e7, amsl=message.z)
+        data["frame"] = message.frame
+        data["seq"] = message.seq
+        data["command"] = message.command
+        return data
+    elif message.frame in (
+        MAVFrame.GLOBAL_RELATIVE_ALT,
+        MAVFrame.GLOBAL_RELATIVE_ALT_INT,
+    ):
+        data["coords"] = GPSCoordinate(lat=message.x / 1e7, lon=message.y / 1e7, ahl=message.z)
+        data["frame"] = message.frame
+        data["seq"] = message.seq
+        data["command"] = message.command
+        return data
+    else:
+        raise ValueError(f"unknown coordinate frame: {message.frame}")
 
 def mavlink_version_number_to_semver(
     number: int, custom: Optional[list[int]] = None

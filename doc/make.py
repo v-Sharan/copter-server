@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     pdoc.pdoc(
         "flockwave",
-        "!flockwave.app_framework",  # requires urwid
+        "flockwave.app_framework",  # requires urwid
         "!flockwave.protocols.mavlink",  # not needed, too much cruft
         "!flockwave.server.ext.socketio.vendor",  # vendored code, not ours
         output_directory=out_dir,

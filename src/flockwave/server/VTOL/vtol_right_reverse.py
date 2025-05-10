@@ -147,6 +147,15 @@ def generate_XY_Positions(numOfDrones, x, y, origin):
         Initial_y += y
     return XY_values
 
+def Grid_Pattern(cols,rows,origin):
+    home_positions = []
+    for row in range(cols):
+        XY_values = generate_XY_Positions(rows,0,-50,origin)
+        for home_pos in XY_values:
+            home_positions.append(home_pos)
+        origin = cartToGeo(origin,10000,(-50,0))
+    return home_positions
+
 
 def VTOL_right_reverse(numOfDrones):
     result = kml_read(
@@ -155,130 +164,132 @@ def VTOL_right_reverse(numOfDrones):
 
     bearing = 0
     prev_bearing = 0
-
-    x = 0
-    y = -60
-
+    #
+    # x = 0
+    # y = -60
+    #
     lat_lons = [[] for _ in range(20)]
+    #
+    # prev_bearing = abs(
+    #     gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
+    # )
+    # print("prevbearrrrrrrrrrrrrr", prev_bearing)
+    # if prev_bearing >= -30 and prev_bearing <= 30:
+    #     x = -60
+    #     y = 0
+    # elif prev_bearing >= 150 and prev_bearing <= 210:
+    #     x = 60
+    #     y = 0
+    # elif prev_bearing >= -125 and prev_bearing <= -50:
+    #     x = 60
+    #     y = 0
+    # elif prev_bearing >= 50 and prev_bearing <= 125:
+    #     x = 0
+    #     y = 60
 
-    prev_bearing = abs(
-        gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
-    )
-    print("prevbearrrrrrrrrrrrrr", prev_bearing)
-    if prev_bearing >= -30 and prev_bearing <= 30:
-        x = -60
-        y = 0
-    elif prev_bearing >= 150 and prev_bearing <= 210:
-        x = 60
-        y = 0
-    elif prev_bearing >= -125 and prev_bearing <= -50:
-        x = 60
-        y = 0
-    elif prev_bearing >= 50 and prev_bearing <= 125:
-        x = 0
-        y = 60
+    # print("xxxxxxxxxxxxxxxxxxxxxYYYYYYYYY", x, y)
+    #
+    # flag = 0
+    # print(result)
+    #
+    # for index in range(len(result) - 1):
+    #     bearing = gps_bearing(
+    #         result[index][0],
+    #         result[index][1],
+    #         result[index + 1][0],
+    #         result[index + 1][1],
+    #     )[1]
+    #
+    #     if (
+    #         prev_bearing >= -30
+    #         and prev_bearing <= 30
+    #         and bearing >= 50
+    #         and bearing <= 125
+    #     ):
+    #         x = -60
+    #         y = 60
+    #     elif (
+    #         prev_bearing >= 50
+    #         and prev_bearing <= 125
+    #         and bearing >= 150
+    #         and bearing <= 210
+    #     ):
+    #         x = 60
+    #         y = 60
+    #     elif (
+    #         prev_bearing >= 150
+    #         and prev_bearing <= 210
+    #         and bearing >= -125
+    #         and bearing <= -50
+    #     ):
+    #         x = 60
+    #         y = -60
+    #     elif (
+    #         prev_bearing >= 50
+    #         and prev_bearing <= 125
+    #         and bearing >= -30
+    #         and bearing <= 30
+    #     ):
+    #         x = 60
+    #         y = -60
+    #     elif (
+    #         prev_bearing >= -125
+    #         and prev_bearing <= -50
+    #         and bearing >= -30
+    #         and bearing <= 30
+    #     ):
+    #         x = -60
+    #         y = -60
+    #     elif (
+    #         prev_bearing >= -210
+    #         and prev_bearing <= -150
+    #         and bearing >= -125
+    #         and bearing <= -50
+    #     ):
+    #         x = 60
+    #         y = -60
+    #     elif (
+    #         prev_bearing >= 50
+    #         and prev_bearing <= 125
+    #         and bearing >= -210
+    #         and bearing <= -125
+    #     ):
+    #         x = 60
+    #         y = 60
+    #     prev_bearing = bearing
+    #
+    #     res = generate_XY_Positions(numOfDrones, x, y, result[index])
+    #     print("Resultttttttttttttt", res)
+    #     flag += 1
+    #     for i in range(len(res)):
+    #         lat_lons[i].append(res[i])
+    #
+    # bearing = gps_bearing(
+    #     result[len(result) - 2][0],
+    #     result[len(result) - 2][1],
+    #     result[len(result) - 1][0],
+    #     result[len(result) - 1][1],
+    # )[1]
 
-    print("xxxxxxxxxxxxxxxxxxxxxYYYYYYYYY", x, y)
+    # if bearing >= -30 and bearing <= 30:
+    #     x = -60
+    #     y = 0
+    # elif bearing >= 50 and bearing <= 125:
+    #     x = 0
+    #     y = 60
+    # elif bearing >= -125 and bearing <= -50:
+    #     x = 0
+    #     y = -60
+    # elif bearing >= -210 and bearing <= -130:
+    #     x = 120
+    #     y = 120
 
-    flag = 0
-    print(result)
+    # res = generate_XY_Positions(numOfDrones, x, y, result[len(result) - 1])
 
-    for index in range(len(result) - 1):
-        bearing = gps_bearing(
-            result[index][0],
-            result[index][1],
-            result[index + 1][0],
-            result[index + 1][1],
-        )[1]
-
-        if (
-            prev_bearing >= -30
-            and prev_bearing <= 30
-            and bearing >= 50
-            and bearing <= 125
-        ):
-            x = -60
-            y = 60
-        elif (
-            prev_bearing >= 50
-            and prev_bearing <= 125
-            and bearing >= 150
-            and bearing <= 210
-        ):
-            x = 60
-            y = 60
-        elif (
-            prev_bearing >= 150
-            and prev_bearing <= 210
-            and bearing >= -125
-            and bearing <= -50
-        ):
-            x = 60
-            y = -60
-        elif (
-            prev_bearing >= 50
-            and prev_bearing <= 125
-            and bearing >= -30
-            and bearing <= 30
-        ):
-            x = 60
-            y = -60
-        elif (
-            prev_bearing >= -125
-            and prev_bearing <= -50
-            and bearing >= -30
-            and bearing <= 30
-        ):
-            x = -60
-            y = -60
-        elif (
-            prev_bearing >= -210
-            and prev_bearing <= -150
-            and bearing >= -125
-            and bearing <= -50
-        ):
-            x = 60
-            y = -60
-        elif (
-            prev_bearing >= 50
-            and prev_bearing <= 125
-            and bearing >= -210
-            and bearing <= -125
-        ):
-            x = 60
-            y = 60
-        prev_bearing = bearing
-
-        res = generate_XY_Positions(numOfDrones, x, y, result[index])
-        print("Resultttttttttttttt", res)
-        flag += 1
-        for i in range(len(res)):
-            lat_lons[i].append(res[i])
-
-    bearing = gps_bearing(
-        result[len(result) - 2][0],
-        result[len(result) - 2][1],
-        result[len(result) - 1][0],
-        result[len(result) - 1][1],
-    )[1]
-
-    if bearing >= -30 and bearing <= 30:
-        x = -60
-        y = 0
-    elif bearing >= 50 and bearing <= 125:
-        x = 0
-        y = 60
-    elif bearing >= -125 and bearing <= -50:
-        x = 0
-        y = -60
-    elif bearing >= -210 and bearing <= -130:
-        x = 120
-        y = 120
-
-    res = generate_XY_Positions(numOfDrones, x, y, result[len(result) - 1])
-
-    for i in range(len(res)):
-        lat_lons[i].append(res[i])
+    for index in range(len(result)):
+        positions = Grid_Pattern(2,5,result[index])
+        for i in range(len(positions)):
+            lat_lons[i].append(positions[i])
 
     for i in range(numOfDrones):
         with open(

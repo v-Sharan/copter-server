@@ -1,6 +1,9 @@
 """Geofence-related data structures and functions for the MAVLink protocol."""
 
 from functools import partial
+
+from flockwave.gps.vectors import GPSCoordinate
+from sympy.codegen import Print
 from trio import fail_after, TooSlowError
 from typing import Callable, Optional, Union, List
 from flockwave.logger import Logger
@@ -11,7 +14,7 @@ from .types import (
     MAVLinkMessageMatcher,
     spec,
 )
-from .utils import mavlink_nav_command_to_gps_coordinate
+from .utils import mavlink_nav_command_to_gps_coordinate,mavlink_nav_command_to_gps_coordinate_with_frame
 
 __all__ = ("AutoMissionManager",)
 
@@ -96,9 +99,51 @@ class AutoMissionManager:
         # Return the assembled status
         return status
 
+    async def get_AutoMisson(self) -> List[dict[str, GPSCoordinate]]:
+        """Returns the configured areas of the geofence from the MAVLink
+        connection.
+
+        Parameters:
+            status: an optional input status object to update
+
+        Returns:
+            a GeofenceStatus object where the `polygons` and `circles` attributes
+            will be filled appropriately with the retrieved information. All
+            the other attributes will be left intact.
+        """
+        status = []
+        # Retrieve geofence polygons and circles
+        mission_type = MAVMissionType.MISSION
+        reply = await self._send_and_wait(
+            mission_type,
+            spec.mission_request_list(mission_type=mission_type),
+            spec.mission_count(mission_type=mission_type),
+        )
+
+        to_point = mavlink_nav_command_to_gps_coordinate_with_frame
+
+        # Iterate over the mission items
+        for index in range(reply.count):
+            reply = await self._send_and_wait(
+                mission_type,
+                spec.mission_request_int(seq=index, mission_type=mission_type),
+                spec.mission_item_int(seq=index, mission_type=mission_type),
+                timeout=0.25,
+            )
+            data = to_point(reply)
+            if reply.seq == 0:
+                continue
+            status.append(data)
+        # Send final acknowledgment
+        await self._send_final_ack(mission_type)
+
+        # Return the assembled status
+        return status
+
+
     async def set_automission_areas(
         self,
-        areas: Union[float, float],
+        areas: List[float],
     ) -> None:
         """Uploads the given geofence polygons and circles to the MAVLink
         connection.
@@ -173,13 +218,100 @@ class AutoMissionManager:
                 finished = True
             else:
                 # Drone requested another item
-                # index = reply.seq
-                if index is None:
-                    index = 0
-                else:
-                    index = index + 1
-                    if num_items == index:
-                        finished = True
+                index = reply.seq
+                # if index is None:
+                #     index = 0
+                # else:
+                #     index = index + 1
+                #     if num_items == index:
+                #         finished = True
+
+    async def upload_AutoMission(
+        self,
+        areas: List[float],
+    ) -> None:
+        """Uploads the given geofence polygons and circles to the MAVLink
+        connection.
+
+        Parameters:
+            areas: the polygons and circles to upload
+
+        Raises:
+            TooSlowError: if the UAV failed to respond in time
+        """
+        # GPSCoordinate
+        items = areas
+
+        num_items = len(items)
+        mission_type = MAVMissionType.MISSION
+
+        index, finished = None, False
+        while not finished:
+            print(index,finished)
+            if index is None:
+                # We need to let the drone know how many items there will be
+                message = spec.mission_count(count=num_items, mission_type=mission_type)
+                should_resend = True
+            else:
+                # We need to send the item with the given index to the drone
+                command, kwds = items[index]
+                params = {
+                    "seq": index,
+                    "command": command,
+                    "mission_type": mission_type,
+                    "param1": 0,
+                    "param2": 0,
+                    "param3": 0,
+                    "param4": 0,
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "frame": MAVFrame.GLOBAL_RELATIVE_ALT,
+                    "current": 0,
+                    "autocontinue": 0,
+                }
+                params.update(kwds)
+                message = spec.mission_item_int(**params)
+                should_resend = False
+
+            # Drone must respond with requesting the next item (or asking
+            # to repeat the current one), or by sending an ACK or NAK. We should
+            # _not_ attempt to re-send geofence items; it is the responsiblity
+            # of the drone to request them again if they got lost.
+            #
+            # TODO(ntamas): we could also receive MISSION_REQUEST_INT here,
+            # we need to handle both!
+            expected_reply = spec.mission_request(mission_type=mission_type)
+            # We have different policies for the initial message that
+            # initiates the upload and the subsequent messages that are
+            # responding to the requests from the drone.
+            #
+            # For the initial message, we attempt to re-send it in case it
+            # got lost. For subsequent messages, we never re-send it (it is
+            # the responsibility of the drone to request them again if our
+            # reply got lost), but we assume that the upload timed out if
+            # we haven't received an ACK or the next request from the drone
+            # in five seconds.
+            reply = await self._send_and_wait(
+                mission_type,
+                message,
+                expected_reply,
+                timeout=1.5 if should_resend else 5,
+                retries=5 if should_resend else 0,
+            )
+            if reply is None:
+                # Final ACK received
+                finished = True
+            else:
+                # Drone requested another item
+                index = reply.seq
+                # if index is None:
+                #     index = 0
+                # else:
+                #     index = index + 1
+                #     if num_items == index:
+                #         finished = True
+
 
     async def clear_mission(self):
         mission_type = MAVMissionType.MISSION

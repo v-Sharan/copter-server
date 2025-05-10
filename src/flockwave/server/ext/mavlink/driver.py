@@ -794,9 +794,9 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_fly_to_target_signal_single(
         self, uav: "MAVLinkUAV", target: GPSCoordinate
     ) -> None:
-        from flockwave.server.socket.globalVariable import alts
-
-        alt = alts[int(uav.id)]
+        from flockwave.server.socket.globalVariable import getAlts
+        alts = getAlts()
+        alt = 40
         await uav.driver._send_guided_mode_single(uav)
         await uav.fly_to(target, alt)
 
@@ -1038,7 +1038,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_takeoff_signal_single(
         self, uav: "MAVLinkUAV", *, scheduled: bool = False, transport=None
     ) -> None:
-        from flockwave.server.socket.globalVariable import vtol_takeoff_height
+        from flockwave.server.socket.globalVariable import vtol_takeoff_height,getTakeoffAlt
 
         if scheduled:
             # Ignore this; scheduled takeoffs are managed by the ScheduledTakeoffManager
@@ -1046,15 +1046,15 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
 
         channel = transport_options_to_channel(transport)
 
-        await self._send_motor_start_stop_signal_single(
-            uav, start=True, transport=transport
-        )
+        # await self._send_motor_start_stop_signal_single(
+        #     uav, start=True, transport=transport
+        # )
 
         # Wait a bit to give the autopilot some time to start the motors, just
         # in case. Not sure whether this is needed.
-        await sleep(0.1)
-        alt = vtol_takeoff_height[int(uav.id)]
-
+        # await sleep(1)
+        # alt = vtol_takeoff_height[int(uav.id)]
+        alt =   getTakeoffAlt()
         # Send the takeoff command
         # await uav.set_mode(15)
         await uav.takeoff_to_relative_altitude(alt, channel=channel)

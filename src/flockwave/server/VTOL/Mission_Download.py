@@ -34,3 +34,12 @@ async def main(
             await VPR(numOfDrones, uavs)
 
     return True
+
+async def landing_main(landingMission,numOfDrones,uavs):
+    if len(landingMission) > 0:
+        download_mission_kml(
+            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Reverse-Mission.kml",
+            landingMission,
+        )
+    await VPR(numOfDrones, uavs)
+    return  True

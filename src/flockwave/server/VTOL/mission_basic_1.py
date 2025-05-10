@@ -7,13 +7,12 @@ from typing import List
 
 
 async def add_mavlink_mission1(
-    i: int, alt: int, uav: UAV, initial_takeoff: int, rtl_height: int
+    i: int, alt: int, uav: UAV, rtl_height: int
 ) -> None:
     manager = AutoMissionManager.for_uav(uav)
     await manager.clear_mission()
     search_file = "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/search-drone-"
     flag = 0
-    lath, lonh = uav.status.position.lat, uav.status.position.lon
     points_coordinate = [
         # [
         #     GPSCoordinate(lath, lonh, 0, initial_takeoff, 0),
@@ -24,46 +23,46 @@ async def add_mavlink_mission1(
         #     MAVCommand.NAV_VTOL_TAKEOFF,
         # ],
     ]
-    with open(
-        "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
-            i
-        ),
-        "r",
-    ) as f:
-        csvreader = csv.reader(f)
-        for row in csvreader:
-            lat = float(row[0])
-            lon = float(row[1])
-            if flag == 2:
-                points_coordinate.append(
-                    [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT],
-                )
-                points_coordinate.append(
-                    [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_LOITER_UNLIM],
-                )
-            else:
-                points_coordinate.append(
-                    [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT],
-                )
-            prev_lat = lat
-            prev_lon = lon
-            flag += 1
-    with open(
-        search_file + str(i) + ".csv",
-        "r",
-    ) as f:
-        csvreader = csv.reader(f)
-        for row in csvreader:
-            lat = float(row[0])
-            lon = float(row[1])
-            points_coordinate.append(
-                [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT]
-            )
-            prev_lat = lat
-            prev_lon = lon
-    points_coordinate.append(
-        [GPSCoordinate(prev_lat, prev_lon, 0, alt, 0), MAVCommand.NAV_LOITER_UNLIM]
-    )
+    # with open(
+    #     "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
+    #         i
+    #     ),
+    #     "r",
+    # ) as f:
+    #     csvreader = csv.reader(f)
+    #     for row in csvreader:
+    #         lat = float(row[0])
+    #         lon = float(row[1])
+    #         if flag == 2:
+    #             points_coordinate.append(
+    #                 [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT],
+    #             )
+    #             points_coordinate.append(
+    #                 [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_LOITER_UNLIM],
+    #             )
+    #         else:
+    #             points_coordinate.append(
+    #                 [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT],
+    #             )
+    #         prev_lat = lat
+    #         prev_lon = lon
+    #         flag += 1
+    # with open(
+    #     search_file + str(i) + ".csv",
+    #     "r",
+    # ) as f:
+    #     csvreader = csv.reader(f)
+    #     for row in csvreader:
+    #         lat = float(row[0])
+    #         lon = float(row[1])
+    #         points_coordinate.append(
+    #             [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT]
+    #         )
+    #         prev_lat = lat
+    #         prev_lon = lon
+    # points_coordinate.append(
+    #     [GPSCoordinate(prev_lat, prev_lon, 0, alt, 0), MAVCommand.NAV_LOITER_UNLIM]
+    # )
     reverse_waypoints = 0
     with open(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-"
@@ -75,6 +74,7 @@ async def add_mavlink_mission1(
         for row in csvreader:
             reverse_waypoints += 1
     count = 0
+    print("reverse_waypoints",reverse_waypoints)
     with open(
         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/reverse-drone-"
         + str(i)
@@ -83,21 +83,21 @@ async def add_mavlink_mission1(
     ) as f:
         csvreader = csv.reader(f)
         for row in csvreader:
-            if count == reverse_waypoints - 4:
-                lat = float(row[0])
-                lon = float(row[1])
-                points_coordinate.append(
-                    [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT]
-                )
-                prev_lat = lat
-                prev_lon = lon
-                points_coordinate.append(
-                    [
-                        GPSCoordinate(prev_lat, prev_lon, 0, alt, 0),
-                        MAVCommand.NAV_LOITER_UNLIM,
-                    ]
-                )
-            elif count > reverse_waypoints - 3:
+            # if count == reverse_waypoints - 4:
+            # lat = float(row[0])
+            # lon = float(row[1])
+            # points_coordinate.append(
+            #     [GPSCoordinate(lat, lon, 0, alt, 0), MAVCommand.NAV_WAYPOINT]
+            # )
+                # prev_lat = lat
+                # prev_lon = lon
+                # points_coordinate.append(
+                #     [
+                #         GPSCoordinate(prev_lat, prev_lon, 0, alt, 0),
+                #         MAVCommand.NAV_LOITER_UNLIM,
+                #     ]
+                # )
+            if count > reverse_waypoints - 3:
                 lat = float(row[0])
                 lon = float(row[1])
                 points_coordinate.append(
@@ -218,18 +218,16 @@ def convert_to_missioncmd(
 
 
 async def main(uavs: dict[str, UAV]) -> bool:
-    from ..socket.globalVariable import alts, vtol_takeoff_height, vtol_rtl_height
+    from ..socket.globalVariable import getAlts,vtol_rtl_height
 
-    alt = 0
+    alts = getAlts()
     for i, uav in enumerate(uavs):
-        initial_takeoff = vtol_takeoff_height[int(uav)]
-        alt = alts[int(uav)]
+        # initial_takeoff = vtol_takeoff_height[int(uav)]
+        alt = alts[uav]
         rtl_height = vtol_rtl_height[int(uav)]
-        print("mission:", i + 1, alt)
         vehicle = uavs[uav]
-        print(vehicle)
         if vehicle:
-            await add_mavlink_mission1(i + 1, alt, vehicle, initial_takeoff, rtl_height)
+            await add_mavlink_mission1(i + 1, alt, vehicle, rtl_height)
             # initial_takeoff += 5
         # await add_mavlink_mission(index, alt, uav, altitudes[i])
     print("Uploaded")

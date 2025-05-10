@@ -78,7 +78,7 @@ async def SplitMission(
     grid_spacing: int,
     coverage_area: int,
 ) -> bool:
-    from ..socket.globalVariable import alts, drone
+    from ..socket.globalVariable import getAlts, drone
 
     isDone = GroupSplitting(
         center_lat_lons=center_latlon,
@@ -86,11 +86,11 @@ async def SplitMission(
         grid_spacing=grid_spacing,
         coverage_area=coverage_area,
     )
-    alt = 100
+    alts = getAlts()
     drone_id = drone
     vehicle = None
     for i, uav in enumerate(uavs):
-        alt = alts[int(uav)]
+        alt = alts[uav]
         vehicle = uavs[uav]
         if vehicle and isDone:
             await vehicle.driver._send_guided_mode_single(vehicle)

@@ -244,7 +244,6 @@ def unload(app):
 
 async def run(app, configuration, logger):
     global exports
-
     address = exports.get("address")
     if address is None:
         logger.warn("HTTP server address is not specified in configuration")

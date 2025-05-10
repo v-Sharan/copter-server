@@ -20,76 +20,75 @@ speed_match = False
 reached_height = False
 
 vtol_takeoff_height = {
+    # 5:30,
+    # 7:35,
+    # 8:40,
+    # 11:45,
+    # 14:50,
+    # 15:30,
+    # 20:35,
+    # 22:40,
+    # 24:45,
+    # 25:50,
     1: 30,
-    2: 30,
-    3: 30,
-    4: 30,
-    5: 30,
-    20: 40,
-    22: 35,
-    24: 30,
-    # 5: 30,
-    # 6: 35,
-    # 7: 40,
-    # 8: 45,
-    # 10: 30,
-    # 11: 35,
-    # 14: 40,
-    # 15: 45,
-    # 20: 30,
-    # 22: 35,
-    # 24: 40,
-    # 25: 45,
+    2: 35,
+    3: 40,
+    4: 45,
+    5: 50,
+    6: 30,
+    7: 35,
+    8: 40,
+    9: 45,
+    10:50
 }
-alts: dict[int, int] = {
-    20: 100,
-    22: 110,
-    24: 120,
-    1: 300,
-    2: 310,
-    3: 300,
-    4: 310,
-    5: 300,
-    # 5: 210,
-    # 6: 200,
-    # 7: 190,
-    # 8: 180,
-    # 10: 170,
-    # 11: 160,
-    # 14: 150,
-    # 15: 140,
-    # 20: 130,
-    # 22: 120,
-    # 24: 110,
-    # 25: 100,
-}
+alts: dict[int, int] = {}
 
 drone = {
-    20: 1,
+    # 5:1,
+    # 7:2,
+    # 8:3,
+    # 11:4,
+    # 14:5,
+    # 15:6,
+    # 20:7,
+    # 22:8,
+    # 24:9,
+    # 25:10,
     1: 1,
     2: 2,
     3: 3,
     4: 4,
     5: 5,
-    22: 2,
-    24: 3,
-    8: 4,
-    10: 5,
-    11: 6,
-    14: 7,
-    15: 8,
-    # 20: 9,
-    # 22: 10,
-    # 24: 11,
-    # 25: 12,
+    6: 6,
+    7: 7,
+    8: 8,
+    9: 9,
+    10:10
 }
 
 
-vtol_rtl_height = {20: 50, 22: 60, 24: 70, 1: 30, 2: 30}
-# vtol_takeoff_height = {7: 50, 14: 45, 22: 40, 24: 35, 25: 30}
-# alts: dict[int, int] = {7: 100, 14: 110, 22: 120, 24: 130, 25: 140}
-
-# drone = {7: 1, 14: 2, 22: 3, 24: 4, 25: 5}
+vtol_rtl_height = {
+    # 5:50,
+    # 7:60,
+    # 8:70,
+    # 11:80,
+    # 14:90,
+    # 15:50,
+    # 20:60,
+    # 22:70,
+    # 24:80,
+    # 25:90,
+    1: 30,
+    2: 35,
+    3: 40,
+    4: 45,
+    5: 50,
+    6: 30,
+    7: 35,
+    8: 40,
+    9: 45,
+    10: 50
+}
 
 past_distance: int | float = 0.0
 plat: float = 0.0
@@ -100,9 +99,46 @@ target_confirmation = GPSCoordinate(lat=0, lon=0, amsl=None, ahl=None, agl=None)
 
 airspeed_failure_ms = 26
 
+radius = 200
+clock_anticlock = 1
+
+def changeRadius(rad):
+    global radius
+    radius = rad
+
+def getRadius():
+    global radius
+    return radius
+
+def changeClockOrAnticlock(clock):
+    global clock_anticlock
+    clock_anticlock = clock
+
+def getClock():
+    global clock_anticlock
+    return clock_anticlock
+
+def changeAlts(paramalts):
+    global alts
+    alts = paramalts
+    return alts
+
+def changeSingleAlt(id,alt):
+    global alts
+    alts[id] = alt
+    return alts
+
+def getAlts():
+    global alts
+    return alts
+
 def changeReachHeight(value:bool):
     global  reached_height
     reached_height = value
+
+def getReachHeight():
+    global reached_height
+    return reached_height
 
 def get_target_confirm():
     global target_confirmation

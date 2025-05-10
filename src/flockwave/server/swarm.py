@@ -1,5 +1,8 @@
 import socket,time,csv
 from math import radians,cos,sin,sqrt,atan2
+from .search import BezierCurve
+from .AutoMission import AutoSplitMission
+from .time import TimeCalculation
 
 def fetch_file_content(file_path):
     lines = []
@@ -507,26 +510,36 @@ def takeoff_socket(alt):
     sent = udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
-def search_socket(): 
-    global udp_socket,server_address1,server_address2,udp_socket2
+def search_socket(points,gridspacing,coverage,ids):
+    global master_udp
+    # global udp_socket,server_address1,server_address2,udp_socket2
     print("Searching........")
-    #udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    data = "search"
+    # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    for num in points:
+        num.reverse()
+    data = str("search"+","+str(points[0][0])+","+str(points[0][1])+","+str(len(ids))+","+str(gridspacing)+","+str(coverage))
+    print(points,len(ids),gridspacing,coverage)
+    master_udp.sendto(data.encode(),adderss.get(2))
+    curve = BezierCurve(center_latitude=points[0][0],center_longitude=points[0][1],coverage_area=coverage,grid_space=gridspacing,num_of_drones=len(ids))
+    curve.GridFormation()
+    curve.generate_bezier_curve()
+    path = curve.return_latlon()
+    time_sample = TimeCalculation(missions=curve.search_grid, speed=18, loiter_radius=200)
     '''
     udp_socket.sendto(str(data).encode(), server_address1)
     time.sleep(0.5)
     udp_socket2.sendto(str(data).encode(), server_address2)
     time.sleep(0.5)
     '''
-    udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
+    # udp_socket3.sendto(str(data).encode(), server_address3)
+    # time.sleep(0.5)
     '''
     udp_socket4.sendto(str(data).encode(), server_address4)
     time.sleep(0.5)
     '''
-    udp_socket5.sendto(str(data).encode(), server_address5)
-
-    time.sleep(0.5)
+    # udp_socket5.sendto(str(data).encode(), server_address5)
+    #
+    # time.sleep(0.5)
     '''
     udp_socket6.sendto(str(data).encode(), server_address6)
     time.sleep(0.5)          
@@ -537,8 +550,8 @@ def search_socket():
     udp_socket9.sendto(str(data).encode(), server_address9)    
     time.sleep(0.5)
     '''
-    udp_socket10.sendto(str(data).encode(), server_address10)
-    return True
+    # udp_socket10.sendto(str(data).encode(), server_address10)
+    return path,time_sample.max_time()
 
 def aggregate_socket():
     print("Aggregation..!!!!")
@@ -635,10 +648,11 @@ def airport_selection(filename):
     return True
 
 def different_alt_socket(initial_alt,alt_diff):
+    global master_udp
     data =str(initial_alt)+str(",")+str(alt_diff)
-    print(data)
-    g="different"+","+str(data)
-    print(g,"data")
+    g=str("different"+","+str(data))
+    print(g)
+    master_udp.sendto(g.encode(),adderss.get(2))
     '''
     udp_socket.sendto(str(g).encode(), server_address1)
     time.sleep(0.5)
@@ -872,11 +886,11 @@ def specific_bot_goal_socket(drone_num,goal_num):
     udp_socket10.sendto(str(d).encode(), server_address10)
     return True
 
-def goal_socket(goal_num):     
+def goal_socket(goal_num,direction,radius):
     print("***Group goal*****!!!!!")
     for num in goal_num:
         num.reverse()
-    data=str("goal"+","+str(goal_num))
+    data=str("goal"+"_"+str(goal_num)+'_'+str(direction)+"_"+str(radius))
     print("d",data)
     master_udp.sendto(data.encode(), adderss.get(2))
     # udp_socket.sendto(str(d).encode(), server_address1)
@@ -940,35 +954,26 @@ def master(master_num):
     result = mavlink_add(master_num)
     return result
 
-def mavlink_add(master_num):
-    global master_ip
-    master_ip_array=['192.168.6.151','192.168.6.152','192.168.6.153','192.168.6.154','192.168.6.155','192.168.6.156','192.168.6.157','192.168.6.158','192.168.6.159','192.168.6.160']
-    master_ip=master_ip_array[int(master_num)-1]
-    print("master_ip",master_ip)
-    add='output add '
-    remove='output remove '
-
-    port_array=[':14551',':14552',':14553',':14554',':14555',':14556',':14557',':14558',':14559',':14560']
-
-
-    data=add+master_ip
-    #data=remove+master_ip
-    #print("data",(data+port_array[0]),type(data))	
+def mavlink_add(uav):
+    global master_udp
+    data = str(str('add')+','+str(uav))
+    print(data)
+    master_udp.sendto(data.encode(),adderss.get(2))
     '''
     mavlink_sock1.sendto((data+port_array[0]).encode(), mavlink_server_address1)
     time.sleep(0.5)
     mavlink_sock2.sendto((data+port_array[1]).encode(), mavlink_server_address2)
     time.sleep(0.5)
-    '''
+   
     mavlink_sock3.sendto((data+port_array[2]).encode(), mavlink_server_address3)
     time.sleep(0.5)
-    '''
+    
     mavlink_sock4.sendto((data+port_array[3]).encode(), mavlink_server_address4)
     time.sleep(0.5)
-    '''
+  
     mavlink_sock5.sendto((data+port_array[4]).encode(), mavlink_server_address5)
     time.sleep(0.5)
-    '''
+   
     mavlink_sock6.sendto((data+port_array[5]).encode(), mavlink_server_address6)
     time.sleep(0.5)
 
@@ -979,48 +984,16 @@ def mavlink_add(master_num):
     time.sleep(0.5)
     mavlink_sock9.sendto((data+port_array[8]).encode(), mavlink_server_address9)
     time.sleep(0.5)
-    '''
     mavlink_sock10.sendto((data+port_array[9]).encode(), mavlink_server_address10)
+    '''
     return True
 
-def mavlink_remove(remove_link):
-     #data = removelink_entry.get()
-    master_ip_array=['192.168.6.151','192.168.6.152','192.168.6.153','192.168.6.154','192.168.6.155','192.168.6.156','192.168.6.157','192.168.6.158','192.168.6.159','192.168.6.160']
-    master_ip=master_ip_array[int(remove_link)-1]
-    print("master_ip",master_ip)
-    add='output add '
-    remove='output remove '
-    port_array=[':14551',':14552',':14553',':14554',':14555',':14556',':14557',':14558',':14559',':14560']
-    data=remove+master_ip
-    print("data",(data+port_array[remove_link-1]),type(data))
-    '''
-    mavlink_sock1.sendto((data+port_array[0]).encode(), mavlink_server_address1)
-    time.sleep(0.5)
-    mavlink_sock2.sendto((data+port_array[1]).encode(), mavlink_server_address2)
-    time.sleep(0.5)
-    '''
-    mavlink_sock3.sendto((data+port_array[2]).encode(), mavlink_server_address3)
-    time.sleep(0.5)
-    '''
-    mavlink_sock4.sendto((data+port_array[3]).encode(), mavlink_server_address4)
-    time.sleep(0.5)
-    '''
-    mavlink_sock5.sendto((data+port_array[4]).encode(), mavlink_server_address5)
-    time.sleep(0.5)
-    '''
-    mavlink_sock6.sendto((data+port_array[5]).encode(), mavlink_server_address6)
-    time.sleep(0.5)
-        
-    mavlink_sock7.sendto((data+port_array[6]).encode(), mavlink_server_address7)
-
-    time.sleep(0.5)
-    mavlink_sock8.sendto((data+port_array[7]).encode(), mavlink_server_address8)
-    time.sleep(0.5)
-    mavlink_sock9.sendto((data+port_array[8]).encode(), mavlink_server_address9)
-    time.sleep(0.5)
-    '''
-    mavlink_sock10.sendto((data+port_array[9]).encode(), mavlink_server_address10)
-    return True
+def mavlink_remove(uav):
+     global master_udp
+     data = str('remove'+','+str(uav))
+     print(data)
+     master_udp.sendto(data.encode(),adderss.get(2))
+     return True
 
 def bot_remove(remove_uav_num):
     print("!!!bot_remove!!")
@@ -1068,9 +1041,14 @@ def navigate(center_latlon,gridspacing,coverage,ids):
     global master_udp
     latlng = str(str(center_latlon[0][1])+","+str(center_latlon[0][0]))
     data = str('navigate'+','+str(latlng)+","+str(1)+","+str(gridspacing)+','+str(coverage))
-    print(data)
+
     master_udp.sendto(data.encode(), adderss.get(2))
-    return True
+    curve = BezierCurve(center_latitude=center_latlon[0][1],center_longitude=center_latlon[0][0],coverage_area=coverage,grid_space=gridspacing,num_of_drones=1)
+    curve.GridFormation()
+    curve.generate_bezier_curve()
+    path = curve.return_latlon()
+    time_sample = TimeCalculation(missions=curve.search_grid, speed=18, loiter_radius=200)
+    return path,time_sample.max_time()
 
 def loiter(center_latlon,direction):
     global master_udp
@@ -1085,3 +1063,37 @@ def skip_point(skip_waypoint):
     data = str('skip'+','+str(skip_waypoint))
     master_udp.sendto(data.encode(), adderss.get(2))
     return True
+
+
+def send_alts(alts):
+    global master_udp
+    data = str('alt'+","+str(alts))
+    print(data,adderss.get(2))
+    master_udp.sendto(data.encode(),adderss.get(2))
+    return True
+
+def splitmission(center_latlon,uavs,gridspace,coverage):
+    global master_udp
+    #group_split_center_lat_lon_array_len(uavs)_grid_space_coverage_area
+    for latlon in center_latlon:
+        latlon.reverse()
+    data = str('split'+"_"+str(center_latlon)+"_"+str(len(uavs))+"_"+str(gridspace)+"_"+str(coverage))
+    master_udp.sendto(data.encode(),adderss.get(2))
+    split = AutoSplitMission(center_lat_lons=center_latlon,coverage_area=coverage,num_of_drones=len(uavs),grid_spacing=gridspace)
+    path = split.return_latlon()
+    return path
+
+def specificsplit(center_latlon,uavs,gridspace,coverage):
+    global master_udp
+    grid = []
+    coverageSpace = []
+    for i in range(len(uavs)):
+        grid.append(gridspace)
+        coverageSpace.append(coverage)
+    print(center_latlon,uavs,gridspace,coverage)
+    split = AutoSplitMission(center_lat_lons=center_latlon, coverage_area=coverage, num_of_drones=len(uavs),grid_spacing=gridspace)
+    path = split.return_latlon()
+    data = str('specificsplit'+"_"+str(center_latlon)+"_"+str(uavs)+"_"+str(grid)+"_"+str(coverageSpace))
+    master_udp.sendto(data.encode(),adderss.get(2))
+    time_sample = TimeCalculation(missions=split.search_grid, speed=20, loiter_radius=200)
+    return path,time_sample.max_time()

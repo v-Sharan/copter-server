@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document id="1913">
+        <Style id="1916">
+            <LineStyle id="1917">
+                <color>ff000000</color>
+                <colorMode>normal</colorMode>
+                <width>2</width>
+            </LineStyle>
+        </Style>
+        <Placemark id="1915">
+            <styleUrl>#1916</styleUrl>
+            <LineString id="1914">
+                <altitudeMode>clampToGround</altitudeMode>
+                <coordinates>80.22331420373503,13.382671585501848,0.0 80.24177867314982,13.382670911299071,0.0 80.2439475319386,13.381898036466017,0.0 80.24177874201524,13.383574794248293,0.0 80.22331420373503,13.383575468498236,0.0 80.22131536814756,13.38244560684156,0.0</coordinates>
+            </LineString>
+        </Placemark>
+        <Placemark id="1919">
+            <name>1</name>
+            <Point id="1918">
+                <coordinates>80.22331420373503,13.382671585501848,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1921">
+            <name>2</name>
+            <Point id="1920">
+                <coordinates>80.24177867314982,13.382670911299071,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1923">
+            <name>3</name>
+            <Point id="1922">
+                <coordinates>80.2439475319386,13.381898036466017,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1925">
+            <name>4</name>
+            <Point id="1924">
+                <coordinates>80.24177874201524,13.383574794248293,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1927">
+            <name>5</name>
+            <Point id="1926">
+                <coordinates>80.22331420373503,13.383575468498236,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1929">
+            <name>6</name>
+            <Point id="1928">
+                <coordinates>80.22131536814756,13.38244560684156,0.0</coordinates>
+            </Point>
+        </Placemark>
+    </Document>
+</kml>

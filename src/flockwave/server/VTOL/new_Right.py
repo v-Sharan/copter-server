@@ -131,149 +131,149 @@ def generate_XY_Positions(
 
 
 async def main(Drones: int, uavs: dict[str, UAV]) -> None:
-    result = kml_read(
-        "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml"
-    )
-
+    # result = kml_read(
+    #     "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/kmls/Forward-Mission.kml"
+    # )
+    #
     numOfDrones = Drones
-
-    bearing = 0
-    prev_bearing = 0
-
-    x = 80
-    y = 0
-
-    lat_lons = [[] for _ in range(20)]
-    prev_bearing = abs(
-        gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
-    )
-
-    if prev_bearing >= -30 and prev_bearing <= 30:
-        x = -60
-        y = 0
-    elif prev_bearing >= -210 and prev_bearing <= -150:
-        x = 60
-        y = 0
-    elif prev_bearing >= -125 and prev_bearing <= -50:
-        x = 60
-        y = 0
-    elif prev_bearing >= 50 and prev_bearing <= 125:
-        x = 0
-        y = 60
-
-    flag = 0
-
-    for index in range(len(result) - 1):
-        bearing = gps_bearing(
-            result[index][0],
-            result[index][1],
-            result[index + 1][0],
-            result[index + 1][1],
-        )[1]
-
-        if (
-            prev_bearing >= -30
-            and prev_bearing <= 30
-            and bearing >= 50
-            and bearing <= 125
-        ):
-            x = -120
-            y = 120
-        elif (
-            prev_bearing >= 50
-            and prev_bearing <= 125
-            and bearing >= 150
-            and bearing <= 210
-        ):
-            x = 120
-            y = 120
-        elif (
-            prev_bearing >= 150
-            and prev_bearing <= 210
-            and bearing >= -125
-            and bearing <= -50
-        ):
-            x = 120
-            y = -120
-        elif (
-            prev_bearing >= 50
-            and prev_bearing <= 125
-            and bearing >= -30
-            and bearing <= 30
-        ):
-            x = 120
-            y = -120
-        elif (
-            prev_bearing >= -125
-            and prev_bearing <= -50
-            and bearing >= -30
-            and bearing <= 30
-        ):
-            x = -120
-            y = -120
-        elif (
-            prev_bearing >= -210
-            and prev_bearing <= -150
-            and bearing >= -125
-            and bearing <= -50
-        ):
-            x = 120
-            y = -120
-        elif (
-            prev_bearing >= 50
-            and prev_bearing <= 125
-            and bearing >= -210
-            and bearing <= -125
-        ):
-            x = 120
-            y = 120
-        prev_bearing = bearing
-        res = generate_XY_Positions(numOfDrones, x, y, result[index])
-
-        for i in range(len(res)):
-            lat_lons[i].append(res[i])
-
-    bearing = gps_bearing(
-        result[len(result) - 2][0],
-        result[len(result) - 2][1],
-        result[len(result) - 1][0],
-        result[len(result) - 1][1],
-    )[1]
-
-    if bearing >= -30 and bearing <= 30:
-        x = -120
-        y = 0
-    elif bearing >= 50 and bearing <= 125:
-        x = 0
-        y = 120
-    elif bearing >= -125 and bearing <= -50:
-        x = 0
-        y = -120
-    elif bearing >= -210 and bearing <= -130:
-        x = 120
-        y = 0
-
-    res = generate_XY_Positions(numOfDrones, x, y, result[len(result) - 1])
-
-    for i in range(len(res)):
-        lat_lons[i].append(res[i])
-
-    for i in range(numOfDrones):
-        print(
-            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
-                i + 1
-            ),
-        )
-        with open(
-            "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
-                i + 1
-            ),
-            "w",
-            newline="",
-        ) as f:
-            csvwriter = csv.writer(f)
-            for j in range(len(lat_lons[i])):
-                csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
+    #
+    # bearing = 0
+    # prev_bearing = 0
+    #
+    # x = 80
+    # y = 0
+    #
+    # lat_lons = [[] for _ in range(20)]
+    # prev_bearing = abs(
+    #     gps_bearing(result[0][0], result[0][1], result[1][0], result[1][1])[1]
+    # )
+    #
+    # if prev_bearing >= -30 and prev_bearing <= 30:
+    #     x = -60
+    #     y = 0
+    # elif prev_bearing >= -210 and prev_bearing <= -150:
+    #     x = 60
+    #     y = 0
+    # elif prev_bearing >= -125 and prev_bearing <= -50:
+    #     x = 60
+    #     y = 0
+    # elif prev_bearing >= 50 and prev_bearing <= 125:
+    #     x = 0
+    #     y = 60
+    #
+    # flag = 0
+    #
+    # for index in range(len(result) - 1):
+    #     bearing = gps_bearing(
+    #         result[index][0],
+    #         result[index][1],
+    #         result[index + 1][0],
+    #         result[index + 1][1],
+    #     )[1]
+    #
+    #     if (
+    #         prev_bearing >= -30
+    #         and prev_bearing <= 30
+    #         and bearing >= 50
+    #         and bearing <= 125
+    #     ):
+    #         x = -120
+    #         y = 120
+    #     elif (
+    #         prev_bearing >= 50
+    #         and prev_bearing <= 125
+    #         and bearing >= 150
+    #         and bearing <= 210
+    #     ):
+    #         x = 120
+    #         y = 120
+    #     elif (
+    #         prev_bearing >= 150
+    #         and prev_bearing <= 210
+    #         and bearing >= -125
+    #         and bearing <= -50
+    #     ):
+    #         x = 120
+    #         y = -120
+    #     elif (
+    #         prev_bearing >= 50
+    #         and prev_bearing <= 125
+    #         and bearing >= -30
+    #         and bearing <= 30
+    #     ):
+    #         x = 120
+    #         y = -120
+    #     elif (
+    #         prev_bearing >= -125
+    #         and prev_bearing <= -50
+    #         and bearing >= -30
+    #         and bearing <= 30
+    #     ):
+    #         x = -120
+    #         y = -120
+    #     elif (
+    #         prev_bearing >= -210
+    #         and prev_bearing <= -150
+    #         and bearing >= -125
+    #         and bearing <= -50
+    #     ):
+    #         x = 120
+    #         y = -120
+    #     elif (
+    #         prev_bearing >= 50
+    #         and prev_bearing <= 125
+    #         and bearing >= -210
+    #         and bearing <= -125
+    #     ):
+    #         x = 120
+    #         y = 120
+    #     prev_bearing = bearing
+    #     res = generate_XY_Positions(numOfDrones, x, y, result[index])
+    #
+    #     for i in range(len(res)):
+    #         lat_lons[i].append(res[i])
+    #
+    # bearing = gps_bearing(
+    #     result[len(result) - 2][0],
+    #     result[len(result) - 2][1],
+    #     result[len(result) - 1][0],
+    #     result[len(result) - 1][1],
+    # )[1]
+    #
+    # if bearing >= -30 and bearing <= 30:
+    #     x = -120
+    #     y = 0
+    # elif bearing >= 50 and bearing <= 125:
+    #     x = 0
+    #     y = 120
+    # elif bearing >= -125 and bearing <= -50:
+    #     x = 0
+    #     y = -120
+    # elif bearing >= -210 and bearing <= -130:
+    #     x = 120
+    #     y = 0
+    #
+    # res = generate_XY_Positions(numOfDrones, x, y, result[len(result) - 1])
+    #
+    # for i in range(len(res)):
+    #     lat_lons[i].append(res[i])
+    #
+    # for i in range(numOfDrones):
+    #     print(
+    #         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
+    #             i + 1
+    #         ),
+    #     )
+    #     with open(
+    #         "C:/Users/vshar/OneDrive/Documents/fullstack/skybrush-server/src/flockwave/server/VTOL/csvs/forward-drone-{}.csv".format(
+    #             i + 1
+    #         ),
+    #         "w",
+    #         newline="",
+    #     ) as f:
+    #         csvwriter = csv.writer(f)
+    #         for j in range(len(lat_lons[i])):
+    #             csvwriter.writerow([lat_lons[i][j][0], lat_lons[i][j][1]])
 
     VTOL_right_reverse(numOfDrones)
 

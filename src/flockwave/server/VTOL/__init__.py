@@ -1,4 +1,4 @@
-from .Mission_Download import main
+from .Mission_Download import main,landing_main
 from .mission_basic_2 import Dynamic_main
 from .spilt import SplitMission
 from .GridPlanning import GridFormation
@@ -12,4 +12,5 @@ __all__ = (
     "GridFormation",
     "Guided_Mission",
     "gps_bearing",
+    'landing_main'
 )

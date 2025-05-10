@@ -20,12 +20,12 @@ class Gimbal:
     position: GPSCoordinate
 
     def __init__(
-        self, host="192.168.6.121", port=2000, position=GPSCoordinate(0, 0, 0, 0)
+        self:Self, host="192.168.6.121", port=2000, position=GPSCoordinate(0, 0, 0, 0)
     ) -> None:
         self.host = host
         self.port = port
-        self.tlat = 13.3914565
-        self.tlon = 80.2391839
+        self.tlat = -35.344588
+        self.tlon = 149.174320
         self.connected = False
         self.position = position
         self.bearing = 0
@@ -46,6 +46,7 @@ class Gimbal:
             ]
         )
         self.bytePacket = bytes(packet)
+
 
         # threading.Thread(
         #     target=self.connect_to_gimbal,
@@ -70,7 +71,7 @@ class Gimbal:
 
     def connect_to_gimbal(self: Self) -> None:
         try:
-            self.socket.connect((self.host, self.port))
+            # self.socket.connect((self.host, self.port))
             time.sleep(1)
             print("Connected to gimbal")
             self.connected = True
@@ -89,7 +90,7 @@ class Gimbal:
             value -= 2 ** (len(hex_str) * 4)
         return value
 
-    def extract_imu_angle(self: Self, data: str) -> tuple[float] | None:
+    def extract_imu_angle(self: Self, data: str) -> tuple[float, float] | None:
         """
         Extracts and calculates the IMU angles from the provided data string.
         """
@@ -146,11 +147,11 @@ class Gimbal:
         return bearing_degrees
 
     def run_in_background_thread(self: Self) -> None:
-        thread1 = threading.Thread(target=self.calculate_coords, daemon=True)
+        # thread1 = threading.Thread(target=self.calculate_coords, daemon=True)
         thread2 = threading.Thread(target=self.get_gps_bearing_loop, daemon=True)
         # self.connection_event.wait()
         try:
-            thread1.start()
+            # thread1.start()
             thread2.start()
         except KeyboardInterrupt:
             self.socket.close()

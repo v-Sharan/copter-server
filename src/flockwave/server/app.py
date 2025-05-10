@@ -57,6 +57,8 @@ from .registries import (
 from .version import __version__ as server_version
 from .swarm import *
 from flockwave.server.ext.mavlink.automission import AutoMissionManager
+from flockwave.server.ext.mavlink.enums import MAVCommand
+from typing import List
 
 
 __all__ = ("app",)
@@ -99,7 +101,7 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec]] = {
         "enter_low_power_mode",
         {"transport": TransportOptions.from_json},
     ),
-    "UAV-TAKEOFF": ("send_takeoff_signal", {"transport": TransportOptions.from_json}),
+    "X-UAV-TAKEOFF": ("send_takeoff_signal", {"transport": TransportOptions.from_json}),
     "UAV-TEST": ("test_component", None),
     "UAV-VER": ("request_version_info", None),
     "UAV-WAKEUP": (
@@ -646,7 +648,86 @@ class SkybrushServer(DaemonApp):
     #     response.body["message"] = data
     #     return response
 
-    async def home_save(
+    def convert_to_missioncmd(
+        self, points_coordinate: List[list[GPSCoordinate, MAVCommand]]
+    ) -> List[tuple[MAVCommand, dict[str, int]]]:
+        points_mission = [
+            (
+                (point[1]),
+                {
+                    "x": int(point[0].lat * 1e7),
+                    "y": int(point[0].lon * 1e7),
+                    "z": int(point[0].ahl),
+                    # "frame":
+                },
+            )
+            for point in points_coordinate
+        ]
+        return points_mission
+
+    def get_mav_command(self, value):
+        try:
+            return MAVCommand(value)
+        except ValueError:
+            return None  # or raise Exception, or use a default
+
+    async def upload_mission(
+        self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
+    ) -> FlockwaveMessage:
+        response = self.message_hub.create_response_or_notification(
+            body={}, in_response_to=message
+        )
+        parameters = dict(message.body)
+        uav: Optional[UAV] = None
+        error: Optional[str] = None
+        # AutoMissionManager
+        uav_id = parameters.pop("uav_id")
+        result = False
+        try:
+            uav = self.find_uav_by_id(uav_id=uav_id)
+            if uav is None:
+                raise RuntimeError("no such UAV")
+            missions = parameters.pop("mission")
+            manager = AutoMissionManager.for_uav(uav)
+            await manager.clear_mission()
+            points_coordinate = []
+            for index, mission in enumerate(missions):
+                print(mission)
+                command = self.get_mav_command(mission["commandId"])
+                if command is None:
+                    raise RuntimeError("No such Command")
+                if index == 0 or command == MAVCommand.NAV_VTOL_TAKEOFF:
+                    points_coordinate.append(
+                        [
+                            GPSCoordinate(
+                                mission["lat"], mission["long"], 0, mission["alt"], 0
+                            ),
+                            command,
+                        ]
+                    )
+                points_coordinate.append(
+                    [
+                        GPSCoordinate(
+                            mission["lat"], mission["long"], 0, mission["alt"], 0
+                        ),
+                        command,
+                    ]
+                )
+            points_mission = self.convert_to_missioncmd(points_coordinate)
+            await manager.upload_AutoMission(points_mission)
+            result = True
+        except RuntimeError as ex:
+            error = str(ex)
+
+        # Update the response
+        if error is not None:
+            response.body["error"] = error
+        else:
+            response.body["result"] = result
+
+        return response
+
+    async def Download_mission(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
     ) -> FlockwaveMessage:
         response = self.message_hub.create_response_or_notification(
@@ -654,16 +735,29 @@ class SkybrushServer(DaemonApp):
         )
         parameters = dict(message.body)
         # position
-        uav_home = [["x", "y", "z"]]
-        uav_ids = parameters.pop("ids", ())
-        for uav_id in uav_ids:
-            uav = self.find_uav_by_id(uav_id)
-            lat, lon = uav.status.position.lat, uav.status.position.lon
-            y, x = await geoToCart((12.948876, 80.141648), 3000, [lat, lon])
-            a, b, c = float(-y), float(x), float(5)
-            if [a, b, c] not in uav_home:
-                uav_home.append([a, b, c])
-        await write_to_csv("latlon-conversion-7.csv", uav_home)
+        print(parameters)
+        uav: Optional[UAV] = None
+        error: Optional[str] = None
+        # AutoMissionManager
+        uav_id = parameters.pop("uav_id")
+        result = False
+        try:
+            uav = self.find_uav_by_id(uav_id=uav_id)
+            if uav is None:
+                raise RuntimeError("no such UAV")
+            manager = AutoMissionManager.for_uav(uav)
+            status = await manager.get_AutoMisson()
+            print(status)
+            response.body["mission"] = status
+            result = True
+        except RuntimeError as ex:
+            error = str(ex)
+
+        # Update the response
+        if error is not None:
+            response.body["error"] = error
+        else:
+            response.body["result"] = result
 
         return response
 
@@ -816,10 +910,11 @@ class SkybrushServer(DaemonApp):
 
     async def simple_go_to(self, target: list[float], uav: UAV):
         from .VTOL import gps_bearing
-        from .socket.globalVariable import alts
+        from .socket.globalVariable import getAlts
 
         # print(uav.id)
-        ahl = alts[int(uav.id)]
+        alts = getAlts()
+        ahl = alts[uav.id]
         for _, point in enumerate(target):
             new_target = GPSCoordinate(lat=point[0], lon=point[1], ahl=ahl)
             await uav.driver._send_fly_to_target_signal_single(uav, new_target)
@@ -886,35 +981,62 @@ class SkybrushServer(DaemonApp):
             await sleep(0.1)
 
     async def settings_swarm(
-            self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
+        self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
     ) -> FlockwaveMessage:
         response = self.message_hub.create_response_or_notification(
             body={}, in_response_to=message
         )
         parameters = dict(message.body)
         msg = parameters["message"].lower()
-        selectedIds = parameters.pop("selected")
-        speed = parameters.pop("speed")
 
-        if msg == 'speed':
+        if msg == "speed":
+            selectedIds = parameters.pop("selected")
+            speed = parameters.pop("speed")
             for id in selectedIds:
                 uav = self.find_uav_by_id(id)
                 if uav:
                     await uav.driver._send_speed_correction(uav, int(speed))
 
-        if msg == 'rad':
-            print(parameters)
+        if msg == "rad":
+            selectedIds = parameters.pop("selected")
             rad = parameters.get("radius")
-            if parameters.get("direction").lower().startswith('a'):
+            if parameters.get("direction").lower().startswith("a"):
                 rad = -rad
             for id in selectedIds:
                 uav = self.find_uav_by_id(id)
                 if uav:
-                    print([uav],'WP_LOITER_RAD', int(rad))
-                    # uav.driver.set_parameter([uav],'WP_LOITER_RAD', int(rad))
-                    await uav.driver._set_parameter_single(uav,'WP_LOITER_RAD', int(rad))
+                    print([uav], "WP_LOITER_RAD", int(rad))
+                    await uav.driver._set_parameter_single(
+                        uav, "WP_LOITER_RAD", int(rad)
+                    )
 
-        response.body['message'] = 'set values to the UAV id {}'.format(parameters.get("id"))
+        if msg == "setaltitude":
+            alts = parameters.pop("alts", "")
+            from .socket.globalVariable import changeAlts
+
+            newalts = changeAlts(alts)
+            print(newalts)
+
+        if msg == "singlechangealt":
+            from .socket.globalVariable import changeSingleAlt
+
+            id = parameters.pop("id")
+            alt = parameters.pop("alt")
+            res = changeSingleAlt(id, alt)
+            send_alts(res)
+
+        if msg == "all":
+            from .socket.globalVariable import changeClockOrAnticlock, changeRadius
+
+            radius = parameters.get("radius")
+            rad = 1
+            if parameters.get("Direction").lower().startswith("a"):
+                rad = -rad
+
+            changeClockOrAnticlock(rad)
+            changeRadius(radius)
+
+        response.body["message"] = "Sent"
 
         return response
 
@@ -960,7 +1082,7 @@ class SkybrushServer(DaemonApp):
         if msg == "payload_drop":
             lat = float(parameters.get("lat"))
             lon = float(parameters.get("lon"))
-            uav = self.find_uav_by_id(uavid)
+            # uav = self.find_uav_by_id(uavid)
             # if uav is None:
             #     print("No Such UAV")
             #     return
@@ -993,7 +1115,7 @@ class SkybrushServer(DaemonApp):
             )
 
             if not grid:
-                # print("Grid", grid)
+                print("Grid", grid)
                 return
 
             if mission == "dynamic type":
@@ -1040,16 +1162,12 @@ class SkybrushServer(DaemonApp):
             mission = get_mission()
             update_mission_index()
             print("Downloaded")
+            print(mission)
             result = mission
 
         if msg == "spilt_mission":
             from .VTOL import SplitMission
 
-            # uavs = []
-            # for uav_id in ids:
-            #     uav = self.find_uav_by_id(uav_id)
-            #     if uav:
-            #         uavs.append(uav)
             uavs = {}
 
             for uavid in selectedIds:
@@ -1085,7 +1203,6 @@ class SkybrushServer(DaemonApp):
 
         return response
 
-
     async def socket_response(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
     ) -> FlockwaveMessage:
@@ -1101,7 +1218,7 @@ class SkybrushServer(DaemonApp):
         msg = parameters["message"].lower()
 
         if msg == "master":
-            result = master(int(parameters.get("ids")[0]))
+            result = master(int(parameters.get("ids", "")[0]))
 
         if msg == "coverage":
             result = get_coverage_time()
@@ -1116,6 +1233,7 @@ class SkybrushServer(DaemonApp):
             result = home_lock()
 
         if msg == "home":
+            rtl_height = parameters.pop()
             result = home_socket()
 
         if msg == "share_data":
@@ -1125,13 +1243,35 @@ class SkybrushServer(DaemonApp):
             result = disperse_socket()
 
         if msg == "search":
-            result = search_socket()
+            stop_socket()
+            await sleep(1)
+            points = parameters.get("coords")
+            gridSpacing = parameters.get("gridSpacing")
+            coverage = parameters.get("coverage")
+            ids = list(app.object_registry.ids_by_type(UAV))
+            path, time_min = search_socket(points, gridSpacing, coverage, ids)
+            result = path
+            response.body["time"] = time_min
 
         if msg == "aggregate":
             result = aggregate_socket()
 
         if msg == "different":  # TODO
-            result = different_alt_socket(parameters["alt"], parameters["alt_diff"])
+            result = different_alt_socket(
+                parameters.get("alt"), parameters.get("alt_diff")
+            )
+            ids = parameters.get("ids")
+            from .socket.globalVariable import changeAlts
+
+            data = {}
+            new_altitudes = [
+                parameters.get("alt") + i * parameters.get("alt_diff")
+                for i in range(len(ids))
+            ]
+            for i, id in enumerate(ids):
+                data[id] = new_altitudes[i]
+            print(data)
+            newalts = changeAlts(data)
 
         if msg == "same":  # TODO
             result = same_alt_socket(parameters["same_alt"])
@@ -1147,8 +1287,14 @@ class SkybrushServer(DaemonApp):
 
         if msg == "goal":
             stop_socket()
-            await sleep(2)
-            result = goal_socket(parameters.get("coords"))
+            await sleep(1)
+            dir = parameters.get("Direction", "")
+            direction = (
+                1 if parameters.get("Direction", "").lower().startswith("c") else -1
+            )
+            result = goal_socket(
+                parameters.get("coords"), direction, parameters.get("radius")
+            )
 
         if msg == "home_goto":
             result = home_goto_socket()
@@ -1164,74 +1310,167 @@ class SkybrushServer(DaemonApp):
             result = fetch_file_content(get_log_file_path())
 
         if msg == "remove_link":
-            result = mavlink_remove(int(parameters["uav"]))
+            stop_socket()
+            await sleep(1)
+            uav = int(parameters.get("id"))
+            result = mavlink_remove(uav)
+            result = True
 
         if msg == "add_link":
-            result = mavlink_add(int(parameters.get("ids")[0]))
+            stop_socket()
+            await sleep(1)
+            uav = int(parameters.get("id"))
+            result = mavlink_add(uav)
 
         if msg == "remove_uav":
             result = bot_remove(int(parameters.get("ids")[0]))
 
-        if msg == 'landing':
+        if msg == "landing":
             stop_socket()
-            await sleep(2)
-            result = landing_mission_send(parameters.get('mission'))
+            await sleep(1)
+            result = landing_mission_send(parameters.get("mission"))
 
-        if msg == 'navigate':
+        if msg == "navigate":
             stop_socket()
-            await sleep(2)
-            center_latlon=parameters.get("coords")
-            gridSpacing=parameters.get("gridSpacing")
-            coverage=parameters.get("coverage")
-            ids = parameters.get("ids")
-            result = navigate(center_latlon,gridSpacing,coverage,ids)
-
-        if msg == 'loiter':
-            stop_socket()
-            await sleep(2)
+            await sleep(1)
             center_latlon = parameters.get("coords")
-            direction = 1 if parameters.get("direction", "").lower().startswith('a') else -1
+            gridSpacing = parameters.get("gridSpacing")
+            coverage = parameters.get("coverage")
+            ids = parameters.get("ids")
+            path, time = navigate(center_latlon, gridSpacing, coverage, ids)
+            result = path
+            response.body["time"] = time
+
+        if msg == "loiter":
+            stop_socket()
+            await sleep(1)
+            center_latlon = parameters.get("coords")
+            direction = (
+                1 if parameters.get("direction", "").lower().startswith("a") else -1
+            )
             result = loiter(center_latlon, direction)
 
-        if msg == 'skip':
+        if msg == "skip":
             point = parameters.get("skip_waypoint")
             result = skip_point(point)
+
+        if msg == "landingmission":
+            from .VTOL import landing_main
+            from .socket.globalVariable import getAlts
+
+            stop_socket()
+            await sleep(1)
+            landingMission = parameters.get("landing")
+            selectedIds = parameters.get("ids")
+            uavs = {}
+
+            for uav_id in selectedIds:
+                uav = self.find_uav_by_id(uav_id)
+                if uav:
+                    uavs[uav_id] = uav
+
+            result = await landing_main(landingMission, len(selectedIds), uavs)
+
+        if msg == "groupsplit":
+            stop_socket()
+            await sleep(1)
+            coords = parameters.get("coords")
+            selectedIds = parameters.get("ids")
+            log.warning(coords)
+            gridSpacing = parameters.get("gridSpacing")
+            coverage = parameters.get("coverage")
+            result = splitmission(
+                center_latlon=coords,
+                uavs=selectedIds,
+                coverage=coverage,
+                gridspace=gridSpacing,
+            )
+
+        if msg == "spificsplit":
+            stop_socket()
+            await sleep(1)
+            group = parameters.get("groups")
+            coverage = parameters.get("coverage")
+            gridSpacing = parameters.get("gridSpacing")
+            sam = dict(group)
+            latlon = []
+            uavs = []
+            print(group)
+            for key, value in sam.items():
+                keys = key.split(",")
+                latlon.append([float(keys[0]), float(keys[1])])
+                for i in range(len(value)):
+                    value[i] = int(value[i])
+                uavs.append(value)
+            path, time = specificsplit(latlon, uavs, gridSpacing, coverage)
+            result = path
+            response.body["time"] = time
 
         response.body["message"] = result
         response.body["method"] = msg
 
         return response
 
-    async def check_height(self,id):
-        uav = self.find_uav_by_id(id)
+    async def check_height(self, ids, alt, speed, res):
+        from .socket.globalVariable import changeReachHeight
+
+        uav = self.find_uav_by_id(ids[-1])
         if uav:
             while True:
                 ahl = uav.status.position.ahl
                 print(ahl)
-                if ahl > 29:
-                    from .socket.globalVariable import changeReachHeight
-                    changeReachHeight(True)
+                if ahl > alt:
+                    for i, id in enumerate(ids):
+                        from .socket.globalVariable import getAlts, drone
+
+                        alts = getAlts()
+                        uav = self.find_uav_by_id(id)
+                        alt = alts[uav.id]
+                        cur = drone[int(uav.id)] - 1
+                        print(cur)
+                        coords = GPSCoordinate(
+                            lat=res[cur][0], lon=res[cur][1], ahl=alt
+                        )
+                        if uav:
+                            await uav.driver._send_fly_to_target_signal_single(
+                                uav, coords
+                            )
+                    await sleep(5)
+                    for i, id in enumerate(ids):
+                        uav = self.find_uav_by_id(id)
+                        if uav:
+                            await uav.driver._send_speed_correction(uav, speed)
                     break
                 await sleep(0.5)
 
-    async def send_guided_command(self,res,ids,speed):
+    async def send_guided_command(self, ids, speed, res):
         while True:
-            from .socket.globalVariable import reached_height
+            from .socket.globalVariable import getReachHeight
+
+            reached_height = getReachHeight()
             if reached_height:
-                for i,id in enumerate(ids):
-                    from .socket.globalVariable import alts
-                    alt = alts[int(id)]
+                print("Reached Height", reached_height)
+                for i, id in enumerate(ids):
+                    if i == 5:
+                        await sleep(5)
+                    from .socket.globalVariable import getAlts
+
+                    alts = getAlts()
                     uav = self.find_uav_by_id(id)
-                    coords = GPSCoordinate(lat=res[i][0],lon=res[i][1],ahl=alt)
+                    alt = alts[uav.id]
+                    coords = GPSCoordinate(lat=res[i][0], lon=res[i][1], ahl=alt)
                     if uav:
-                        await uav.driver._send_fly_to_target_signal_single(uav,coords)
+                        await uav.driver._send_fly_to_target_signal_single(uav, coords)
                 break
             await sleep(0.5)
         await sleep(5)
         for i, id in enumerate(ids):
             uav = self.find_uav_by_id(id)
             if uav:
-                await uav.driver._send_speed_correction(uav,speed)
+                await uav.driver._send_speed_correction(uav, speed)
+        from .socket.globalVariable import changeReachHeight
+
+        changeReachHeight(False)
 
     async def dispatch_to_uavs(
         self, message: FlockwaveMessage, sender: Client
@@ -1260,20 +1499,21 @@ class SkybrushServer(DaemonApp):
         message_type = parameters.pop("type")
         uav_ids: Sequence[str] = parameters.pop("ids", ())
         transport: Any = parameters.get("transport")
-        # if message_type == "UAV-TAKEOFF":
-        #     print(parameters)
-        #     from .socket.globalVariable import update_Takeoff_Alt
-        #
-        #     update_Takeoff_Alt(int(parameters.get("alt")))
-        print(message_type)
-        if (message_type == 'UAV-TAKEOFF'):
-            point = parameters.pop("alt")
+
+        if message_type == "X-UAV-TAKEOFF":
+            from .socket.globalVariable import update_Takeoff_Alt
+
+            alt = parameters.pop("alt")
+            update_Takeoff_Alt(alt)
+            point = parameters.pop("coords")
+            log.warning(str(point))
             speed = parameters.pop("speed")
             from .VTOL.new_left import generate_XY_Positions
-            res = generate_XY_Positions(len(uav_ids),50,50,point)
-            print(res)
-            self.run_in_background(self.check_height,uav_ids[0])
-            self.run_in_background(self.send_guided_command,res,uav_ids,speed)
+
+            res = generate_XY_Positions(10, 0, -100, point)
+            log.warning(str(res))
+            self.run_in_background(self.check_height, uav_ids, alt - 1, speed, res)
+            # self.run_in_background(self.send_guided_command,uav_ids,speed,res)
 
         # Sort the UAVs being targeted by drivers. If `transport` is a
         # TransportOptions object and it indicates that we should ignore the
@@ -2014,7 +2254,7 @@ async def handle_single_uav_operations(
     "UAV-TEST",
     "UAV-VER",
     "UAV-WAKEUP",
-    "UAV-TAKEOFF",
+    "X-UAV-TAKEOFF",
     "X-UAV-GUIDED",
     "X-UAV-socket",
     "X-UAV-MISSION",
@@ -2049,9 +2289,14 @@ async def handleCameraMission(
     return await app.CameraControl_swarm(message, sender)
 
 
-@app.message_hub.on("X-HOME-LOCK")
-async def handleHomwLock(message: FlockwaveMessage, sender: Client, hub: MessageHub):
-    return await app.home_save(message, sender)
+@app.message_hub.on("X-AUTO-MISSION")
+async def handleHomeLock(message: FlockwaveMessage, sender: Client, hub: MessageHub):
+    return await app.upload_mission(message, sender)
+
+
+@app.message_hub.on("X-AUTO-DOWNLOAD")
+async def download_mission(message: FlockwaveMessage, sender: Client, hub: MessageHub):
+    return await app.Download_mission(message, sender)
 
 
 # ######################################################################## #

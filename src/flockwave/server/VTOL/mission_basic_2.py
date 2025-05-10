@@ -73,12 +73,12 @@ def convert_to_missioncmd(
 
 
 async def Dynamic_main(uavs: dict[str, UAV]) -> bool:
-    from ..socket.globalVariable import alts, drone
+    from ..socket.globalVariable import getAlts, drone
 
     drone_id = drone
-    alt = 0
+    alts = getAlts()
     for i, uav in enumerate(uavs):
-        alt = alts[int(uav)]
+        alt = alts[uav]
         vehicle = uavs[uav]
         print(i + 1)
         if vehicle:
