@@ -19,6 +19,7 @@ SERVICE_MAP: dict[str, tuple[str, int]] = {
     "sidekick": ("relative", 2),
     "rcin": ("relative", 3),
     "ssdp": ("absolute", 1900),
+    "img_server": ("relative", 5),
 }
 """Dictionary mapping registered Skybrush-related services to the corresponding
 absolute or relative port numbers.

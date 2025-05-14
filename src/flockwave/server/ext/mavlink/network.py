@@ -33,7 +33,6 @@ from flockwave.networking import find_interfaces_with_address
 from flockwave.server.comm import CommunicationManager
 from flockwave.server.model import ConnectionPurpose
 from flockwave.server.utils import nop, overridden
-
 from .comm import (
     create_communication_manager,
     Channel,
@@ -310,6 +309,7 @@ class MAVLinkNetwork:
             use_connection: context manager that must be entered when the
                 network manager wishes to register a connection in the
                 application
+            get_location: returns the location of server it self
         """
         if len(self._connections) > 1:
             if self.id:

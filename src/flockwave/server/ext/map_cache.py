@@ -12,7 +12,7 @@ from trio import sleep_forever, open_file
 from typing import Optional
 from pathlib import Path
 import httpx
-from enum import Enum, IntEnum, IntFlag
+from enum import Enum
 
 from flockwave.server.utils import overridden
 from flockwave.server.utils.quart import make_blueprint

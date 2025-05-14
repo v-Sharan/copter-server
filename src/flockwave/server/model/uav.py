@@ -73,6 +73,20 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
             "minimum": 0.0,
             "maximum": 360.0,
         }
+        bearingFromGCS = {
+            "title": "Bearing From GCS",
+            "description": "Bearing From GCS of a UAV",
+            "type": "float",
+            "minimum": 0.0,
+            "maximum": 360.0,
+        }
+        distanceFromGCS = {
+            "title": "Distance From GCS",
+            "description": "Distance From GCS of a UAV",
+            "type": "float",
+            "minimum": 0.0,
+            "maximum": 1000000000.0,
+        }
         throttle = {
             "title": "Throttle percentage of UAV",
             "description": "Throttle percentage of UAV",
@@ -100,6 +114,8 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
         schema["properties"]["throttle"] = throttle
         schema["properties"]["wind_speed"] = wind_speed
         schema["properties"]["wind_direction"] = wind_direction
+        schema["properties"]["bearing"] = bearingFromGCS
+        schema["properties"]["distance"] = distanceFromGCS
         mappers = {"heading": scaled_by(10), "debug": as_base64}
 
     debug: bytes
@@ -123,6 +139,8 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
     throttle: int
     wind_direction: float
     wind_speed: float
+    bearing: float
+    distance: float
 
     def __init__(
         self, id: Optional[str] = None, timestamp: Optional[TimestampLike] = None
@@ -156,6 +174,8 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
         self.throttle = 0
         self.wind_direction = 0.0
         self.wind_speed = 0.0
+        self.bearing = 0.0
+        self.distance = 0.0
 
     @property
     def position_xyz(self) -> Optional[PositionXYZ]:
@@ -400,6 +420,36 @@ class UAVBase(UAV):
         rssi[index] = value
         self._status.update_timestamp()
 
+    def distance_bearing(
+        self, homeLattitude, homeLongitude, destinationLattitude, destinationLongitude
+    ) -> list[float]:
+        import math
+
+        R = 6371e3  # Radius of earth in metres
+        rlat1 = homeLattitude * (math.pi / 180)
+        rlat2 = destinationLattitude * (math.pi / 180)
+        rlon1 = homeLongitude * (math.pi / 180)
+        rlon2 = destinationLongitude * (math.pi / 180)
+        dlat = (destinationLattitude - homeLattitude) * (math.pi / 180)
+        dlon = (destinationLongitude - homeLongitude) * (math.pi / 180)
+        # haversine formula to find distance
+        a = (math.sin(dlat / 2) * math.sin(dlat / 2)) + (
+            math.cos(rlat1)
+            * math.cos(rlat2)
+            * (math.sin(dlon / 2) * math.sin(dlon / 2))
+        )
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        distance = R * c  # distance in metres
+        # formula for bearing
+        y = math.sin(rlon2 - rlon1) * math.cos(rlat2)
+        x = math.cos(rlat1) * math.sin(rlat2) - math.sin(rlat1) * math.cos(
+            rlat2
+        ) * math.cos(rlon2 - rlon1)
+        bearing = math.atan2(y, x)  # bearing in radians
+        bearingDegrees = bearing * (180 / math.pi)
+        out = [distance, bearingDegrees]
+        return out
+
     def update_status(
         self,
         *,
@@ -422,6 +472,7 @@ class UAVBase(UAV):
         throttle: Optional[int] = None,
         wind_direction: Optional[float] = None,
         wind_speed: Optional[float] = None,
+        gcsLocation: Optional[GPSCoordinate] = None,
     ):
         """Updates the status information of the UAV.
 
@@ -471,6 +522,17 @@ class UAVBase(UAV):
             self._status.bootms = bootms
         if position is not None:
             self._status.position.update_from(position, precision=7)
+            if gcsLocation is not None:
+                [distance, bearing] = self.distance_bearing(
+                    gcsLocation.lat,
+                    gcsLocation.lon,
+                    position.lat,
+                    position.lon,
+                )
+                self._status.bearing = bearing
+                self._status.distance = distance
+                # print(self._status.bearing)
+                # print(self._status.distance)
         if position_xyz is not None:
             if self._status.position_xyz is None:
                 self._status.position_xyz = PositionXYZ()

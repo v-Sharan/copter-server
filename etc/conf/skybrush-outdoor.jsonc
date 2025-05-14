@@ -7,6 +7,17 @@
       "enabled": true,
       "route": "/map_cache"
     },
+    // "location": {
+    //   "enabled": true,
+    //   "fixed": {
+    //     "position": [12.948916, 80.141855],
+    //     "fixed": 1
+    //   }
+    // },
+    "http": {
+      "enable": true,
+      "detectionFolder": "detection"
+    },
     "mavlink": {
       "enabled": true,
       "networks": {

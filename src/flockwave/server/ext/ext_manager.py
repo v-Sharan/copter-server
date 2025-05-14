@@ -273,7 +273,7 @@ handle_EXT_SETCFG = for_each_id(
 handle_EXT_UNLOAD = for_each_id(only_if_loaded(unload_extension))
 
 
-def handle_EXT_LIST(ext, message, sender, hub):
+def handle_EXT_LIST(ext: ExtensionManager, message, sender, hub):
     global _my_name
 
     loaded = ext.loaded_extensions

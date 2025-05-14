@@ -37,7 +37,7 @@ from flockwave.server.model.transport import TransportOptions
 from flockwave.server.model.uav import VersionInfo, UAVBase, UAVDriver
 from flockwave.server.utils import color_to_rgb8_triplet, to_uppercase_string
 from flockwave.spec.errors import FlockwaveErrorCode
-
+from flockwave.server.ext.location import get_location
 from flockwave.server.show import (
     get_altitude_reference_from_show_specification,
     get_coordinate_system_from_show_specification,
@@ -795,6 +795,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         self, uav: "MAVLinkUAV", target: GPSCoordinate
     ) -> None:
         from flockwave.server.socket.globalVariable import getAlts
+
         alts = getAlts()
         alt = 40
         await uav.driver._send_guided_mode_single(uav)
@@ -1038,7 +1039,10 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_takeoff_signal_single(
         self, uav: "MAVLinkUAV", *, scheduled: bool = False, transport=None
     ) -> None:
-        from flockwave.server.socket.globalVariable import vtol_takeoff_height,getTakeoffAlt
+        from flockwave.server.socket.globalVariable import (
+            vtol_takeoff_height,
+            getTakeoffAlt,
+        )
 
         if scheduled:
             # Ignore this; scheduled takeoffs are managed by the ScheduledTakeoffManager
@@ -1054,7 +1058,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         # in case. Not sure whether this is needed.
         # await sleep(1)
         # alt = vtol_takeoff_height[int(uav.id)]
-        alt =   getTakeoffAlt()
+        alt = getTakeoffAlt()
         # Send the takeoff command
         # await uav.set_mode(15)
         await uav.takeoff_to_relative_altitude(alt, channel=channel)
@@ -1734,8 +1738,19 @@ class MAVLinkUAV(UAVBase):
         else:
             heading = 0
 
+        location = None
+
+        if callable(get_location):
+            for _ in range(3):
+                location = get_location()
+                if location is None or location.position is None:
+                    continue
+
         self.update_status(
-            position=self._position, velocity=self._velocity, heading=heading
+            position=self._position,
+            velocity=self._velocity,
+            heading=heading,
+            gcsLocation=location.position,
         )
         self.notify_updated()
 

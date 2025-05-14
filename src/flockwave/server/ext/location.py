@@ -13,6 +13,8 @@ from flockwave.gps.vectors import GPSCoordinate
 from flockwave.logger import Logger
 from flockwave.server.utils.formatting import format_gps_coordinate
 
+from trio import sleep
+
 
 @dataclass(frozen=True)
 class Location:
@@ -69,6 +71,10 @@ def _distance_of_locations(
     if second_pos is None:
         return inf
     return haversine(first_pos, second_pos)
+
+
+def change_server_location(location: GPSCoordinate) -> bool:
+    global _location, _last_location
 
 
 def get_location() -> Location:
