@@ -3,7 +3,7 @@ of the server in geodetic coordinates.
 """
 
 from __future__ import annotations
-
+from functools import partial
 from dataclasses import dataclass
 from math import inf
 from typing import Any, ClassVar, Optional
@@ -13,7 +13,7 @@ from flockwave.gps.vectors import GPSCoordinate
 from flockwave.logger import Logger
 from flockwave.server.utils.formatting import format_gps_coordinate
 
-from trio import sleep
+from trio import sleep_forever
 
 
 @dataclass(frozen=True)
@@ -71,10 +71,6 @@ def _distance_of_locations(
     if second_pos is None:
         return inf
     return haversine(first_pos, second_pos)
-
-
-def change_server_location(location: GPSCoordinate) -> bool:
-    global _location, _last_location
 
 
 def get_location() -> Location:
@@ -199,6 +195,66 @@ def unload():
 
     _reset()
     _log = None
+
+
+def get_current_location(ext, message, sender, hub):
+    global _location, _location_priority, _last_location, _fallback_location
+    print("get_current_location")
+    if _location is None:
+        _location, _location_priority = _validate_location()
+
+        # If the location changed significantly (more than 10m), log the
+        # new location
+        if _distance_of_locations(_last_location, _location) > 10:
+            _log_current_location()
+
+        _last_location = _location
+
+    return {
+        "location": (
+            {"lat": _location.position.lat, "lon": _location.position.lon}
+            if _location.position is not None
+            else None
+        )
+    }
+
+
+def set_location(ext, message, sender, hub):
+    global _fallback_location, _location
+    print("set_location")
+    _location = None
+
+    newLoc = message.body.get("newLoc")
+
+    if newLoc and isinstance(newLoc, dict) and "lat" in newLoc and "lon" in newLoc:
+        position = GPSCoordinate(lat=newLoc["lat"], lon=newLoc["lon"], amsl=0)
+        location = Location(position=position, accuracy=0)
+
+        _fallback_location = location
+
+        return {"location": _fallback_location.position}
+    else:
+        return {"error": "Invalid Location data provided"}
+
+
+def isLocationSet(ext, message, sender, hub):
+    location = get_location()
+    print("isLocationSet")
+    return {"isSetLocation": True if location.position is not None else False}
+
+
+async def run(app, configuration, logger):
+    handlers = {
+        "X-LOC-STATUS": get_current_location,
+        "X-LOC-SET": set_location,
+        "X-LOC-ISSET": isLocationSet,
+    }
+
+    handlers = {
+        key: partial(func, app.extension_manager) for key, func in handlers.items()
+    }
+    with app.message_hub.use_message_handlers(handlers):
+        await sleep_forever()
 
 
 dependencies = ()
