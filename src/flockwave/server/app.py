@@ -860,6 +860,7 @@ class SkybrushServer(DaemonApp):
             tcp_checksum_val = self.tcp_checksum(bytearray.fromhex(tcp_body))
             hexcode = header + " 10" + " " + tcp_body + " " + tcp_checksum_val
             packet = bytes.fromhex(hexcode)
+            # print(packet)
             res = camera_control(packet, parameters.pop("ip"))
 
         response.body["message"] = res

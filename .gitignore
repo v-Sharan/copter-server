@@ -36,3 +36,6 @@ text_extraction_python3.py
 plane_aerobatics.lua
 
 tiles/
+
+func.py
+test.py
