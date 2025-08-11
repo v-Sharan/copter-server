@@ -838,7 +838,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
     async def _send_landing_signal_single(
         self, uav: "MAVLinkUAV", *, transport=None
     ) -> None:
-        await uav.set_mode("qland")
+        await uav.set_mode("land")
 
     async def _send_light_or_sound_emission_signal_broadcast(
         self, signals: list[str], duration: int, *, transport=None
@@ -2649,7 +2649,7 @@ class MAVLinkUAV(UAVBase):
             # active, critical, emergency, poweroff, termination)
             FlockwaveErrorCode.RETURN_TO_HOME: is_returning_home
             and heartbeat.system_status > MAVState.STANDBY,
-            FlockwaveErrorCode.LOW_AIRSPEED: airspeed_failure,
+            #FlockwaveErrorCode.LOW_AIRSPEED: airspeed_failure,
         }
 
         # Clear the collected prearm failure messages if the heartbeat and/or

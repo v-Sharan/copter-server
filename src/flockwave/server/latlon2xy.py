@@ -80,7 +80,7 @@ def geoToCart(origin, endDistance, geoLocation):
 
     # Converting (latitude, longitude) to (x,y) using interpolation function
     y, x = f_lat(geoLocation[0]), f_lon(geoLocation[1])
-    return (y, x)
+    return (x, y)
 
 
 def cartToGeo(origin, endDistance, cartLocation):

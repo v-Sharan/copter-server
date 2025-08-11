@@ -91,7 +91,7 @@ def start(
     from flockwave.server.app import app
 
     # Log what we are doing
-    log.info(f"Starting Dhaksha-Live server {__version__}")
+    log.info(f"Starting XAG server {__version__}")
 
     # Configure the application
     retval = app.prepare(config, debug=debug)

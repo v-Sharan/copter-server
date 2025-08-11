@@ -101,7 +101,7 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec]] = {
         "enter_low_power_mode",
         {"transport": TransportOptions.from_json},
     ),
-    "X-UAV-TAKEOFF": ("send_takeoff_signal", {"transport": TransportOptions.from_json}),
+    "UAV-TAKEOFF": ("send_takeoff_signal", {"transport": TransportOptions.from_json}),
     "UAV-TEST": ("test_component", None),
     "UAV-VER": ("request_version_info", None),
     "UAV-WAKEUP": (
@@ -958,6 +958,30 @@ class SkybrushServer(DaemonApp):
         # print(response.body)
         return response
 
+    def compute_antenna_az(self, lat, lon, uav: UAV):
+        from .latlon2xy import distance_bearing
+
+        print("%%%%%%%%%%%%%", lat, lon, uav)
+        # while True:
+        # print(
+        #     "=uav.status.position.lat######",
+        #     uav.status.position.lat,
+        #     uav.status.position.lon,
+        # )
+        [_, bearing] = distance_bearing(
+            homeLattitude=uav.status.position.lat,
+            homeLongitude=uav.status.position.lon,
+            destinationLattitude=lat,
+            destinationLongitude=lon,
+        )
+        print(bearing)
+        if bearing < 0:
+            self.bearing = bearing + 360
+        else:
+            self.bearing = bearing
+
+        # await sleep(0.1)
+
     async def fetch_target(self, uav: UAV):
         from .VTOL import gps_bearing
         from .socket.globalVariable import update_target_confirmation
@@ -1039,6 +1063,61 @@ class SkybrushServer(DaemonApp):
 
         response.body["message"] = "Sent"
 
+        return response
+
+    def parseCamera_message(
+        self,
+        camLocation,
+        targetLocation,
+        yaw,
+        in_response_to: Optional[FlockwaveMessage] = None,
+    ):
+
+        body = {
+            "camLocation": camLocation,
+            "targetLocation": targetLocation,
+            "yaw": yaw,
+            "type": "X-CAMERA-LOOP",
+        }
+        response = self.message_hub.create_response_or_notification(
+            body=body, in_response_to=in_response_to
+        )
+        # print(response.body)
+        return response
+
+    async def get_camera_data(self, gimbalip):
+        while True:
+            # code for tcp camera location , target Location , yaw
+            camLoc = [0.0, 0.0]
+            tarLoc = [0.0, 0.0]
+            yaw = 0.0
+            self.message_hub.send_message(
+                self.parseCamera_message(
+                    camLocation=camLoc, targetLocation=tarLoc, yaw=yaw
+                )
+            )
+            await sleep(1)
+
+    async def camera_handler(
+        self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
+    ) -> FlockwaveMessage:
+
+        response = self.message_hub.create_response_or_notification(
+            body={}, in_response_to=message
+        )
+        parameters = dict(message.body)
+        msg = parameters["message"].lower()
+
+        selectedIP = parameters.pop("selected")
+
+        if msg == "camera-inital":
+            print("selected Camera Ip", selectedIP)
+            # code for initalize background camera loop for camera position, target postion , yaw
+            self.run_in_background(self.get_camera_data, selectedIP)
+            result = "success"
+
+        response.body["message"] = result
+        response.body["method"] = msg
         return response
 
     async def vtol_swarm(
@@ -1215,11 +1294,16 @@ class SkybrushServer(DaemonApp):
 
         # Process the body
         parameters = dict(message.body)
+        print("param", parameters)
         result = ""
         msg = parameters["message"].lower()
-
+        print("mgs", msg)
         if msg == "master":
-            result = master(int(parameters.get("ids", "")[0]))
+            result = master(int(parameters.get("id", "")))
+
+        if msg == "offline":
+            print("OFFline!!!!!")
+            result = master(0)
 
         if msg == "coverage":
             result = get_coverage_time()
@@ -1234,30 +1318,43 @@ class SkybrushServer(DaemonApp):
             result = home_lock()
 
         if msg == "home":
-            rtl_height = parameters.pop()
+            stop_socket()
+            await sleep(1)
             result = home_socket()
 
         if msg == "share_data":
             result = share_data_func()
 
         if msg == "disperse":
+            stop_socket()
             result = disperse_socket()
 
         if msg == "search":
             stop_socket()
             await sleep(1)
             points = parameters.get("coords")
-            gridSpacing = parameters.get("gridSpacing")
+            camAlt = parameters.get("camAlt")
+            overlap = parameters.get("overlap")
+            zoomLevel = parameters.get("zoomLevel")
             coverage = parameters.get("coverage")
-            ids = list(app.object_registry.ids_by_type(UAV))
-            path, time_min = search_socket(points, gridSpacing, coverage, ids)
+            ids = parameters.get("ids")
+            print("search ids", ids, len(ids))
+            # ids = list(app.object_registry.ids_by_type(UAV))
+            path, time_min = search_socket(
+                points, camAlt, overlap, zoomLevel, coverage, ids
+            )
+            print("path", len(path))
             result = path
             response.body["time"] = time_min
 
         if msg == "aggregate":
-            result = aggregate_socket()
+            stop_socket()
+            points = parameters.get("coords")
+            result = aggregate_socket(points)
 
         if msg == "different":  # TODO
+            stop_socket()
+            await sleep(1)
             result = different_alt_socket(
                 parameters.get("alt"), parameters.get("alt_diff")
             )
@@ -1284,21 +1381,25 @@ class SkybrushServer(DaemonApp):
             result = return_socket()
 
         if msg == "specific_bot_goal":
-            result = specific_bot_goal_socket(parameters["uav"], parameters["goal"])
+            stop_socket()
+            await sleep(1)
+            result = specific_bot_goal_socket(parameters["ids"], parameters["goal"])
 
         if msg == "goal":
             stop_socket()
             await sleep(1)
-            dir = parameters.get("Direction", "")
-            direction = (
-                1 if parameters.get("Direction", "").lower().startswith("c") else -1
-            )
-            result = goal_socket(
-                parameters.get("coords"), direction, parameters.get("radius")
-            )
+            print(parameters["ids"], len(parameters["ids"]), "!!!")
+            if len(parameters["ids"]) == 1:
+                result = specific_bot_goal_socket(
+                    parameters["ids"], parameters["coords"]
+                )
+            else:
+                result = goal_socket(parameters.get("coords"))
 
-        if msg == "home_goto":
-            result = home_goto_socket()
+        # if msg == "land":
+        #     stop_socket()
+        #     await sleep(1)
+        #     result = land_socket()
 
         if msg == "plot":
             result = airport_selection(
@@ -1329,18 +1430,21 @@ class SkybrushServer(DaemonApp):
         if msg == "landing":
             stop_socket()
             await sleep(1)
-            result = landing_mission_send(parameters.get("mission"))
+            # result = landing_mission_send(parameters.get("mission"))
+            result = land_socket()
 
         if msg == "navigate":
             stop_socket()
             await sleep(1)
             center_latlon = parameters.get("coords")
-            gridSpacing = parameters.get("gridSpacing")
+            camAlt = parameters.get("camAlt")
+            overlap = parameters.get("overlap")
+            zoomLevel = parameters.get("zoomLevel")
             coverage = parameters.get("coverage")
             ids = parameters.get("ids")
-            path, time = navigate(center_latlon, gridSpacing, coverage, ids)
+            path = navigate(center_latlon, camAlt, overlap, zoomLevel, coverage, ids)
             result = path
-            response.body["time"] = time
+            # response.body["time"] = time
 
         if msg == "loiter":
             stop_socket()
@@ -1375,24 +1479,47 @@ class SkybrushServer(DaemonApp):
         if msg == "groupsplit":
             stop_socket()
             await sleep(1)
-            coords = parameters.get("coords")
+            coords = []
+            features = parameters.get("features")
+            featureType = features[0]["type"]
+            for feature in features:
+                points = feature["points"]
+                points_array = []
+                for point in points:
+                    point.reverse()
+                    points_array.append(point)
+                coords.append(points_array)
+            print(len(coords))
             selectedIds = parameters.get("ids")
-            log.warning(coords)
-            gridSpacing = parameters.get("gridSpacing")
+            log.warning("features: {}".format(coords))
+            camAlt = parameters.get("camAlt")
+            overlap = parameters.get("overlap")
+            zoomLevel = parameters.get("zoomLevel")
             coverage = parameters.get("coverage")
+
+            from .swarm import compute_grid_spacing
+
+            gridSpacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
+            print("gridSpacing!!!!!!!!", gridSpacing)
             result = splitmission(
                 center_latlon=coords,
                 uavs=selectedIds,
                 coverage=coverage,
                 gridspace=gridSpacing,
+                featureType=featureType,
             )
 
         if msg == "spificsplit":
             stop_socket()
             await sleep(1)
+            featureType = None
             group = parameters.get("groups")
             coverage = parameters.get("coverage")
-            gridSpacing = parameters.get("gridSpacing")
+            camAlt = parameters.get("camAlt")
+            overlap = parameters.get("overlap")
+            zoomLevel = parameters.get("zoomLevel")
+            print("camAlt, zoomLevel, overlap", group, camAlt, zoomLevel, overlap)
+            # gridSpacing = parameters.get("gridSpacing")
             sam = dict(group)
             latlon = []
             uavs = []
@@ -1403,13 +1530,46 @@ class SkybrushServer(DaemonApp):
                 for i in range(len(value)):
                     value[i] = int(value[i])
                 uavs.append(value)
-            path, time = specificsplit(latlon, uavs, gridSpacing, coverage)
+            from .swarm import compute_grid_spacing
+
+            gridSpacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
+            print("gridSpacing@@@@@", gridSpacing)
+            path = specificsplit(latlon, uavs, gridSpacing, coverage, featureType)
             result = path
-            response.body["time"] = time
+
+        if msg == "antenna_az":
+            print("########AZZZZZZZZ####")
+            ids = parameters.pop("id", ())  # parameters["ids"]
+            print("ids", ids)
+            uav = self.find_uav_by_id(ids)
+            print("uav", uav)
+            if not uav:
+                result = "No vehicle Connected"
+                return response
+
+            antenna_coordinates = parameters["coords"]
+            self.compute_antenna_az(
+                antenna_coordinates[0][1], antenna_coordinates[0][0], uav
+            )
+            result = True
+            response.body["angle"] = self.bearing
+
+        if msg == "start_capture":
+            selectedIds = parameters.get("id")
+            print("selectedIds", selectedIds)
+            from .cameraActions import start
+
+            result = await start(selectedIds)
+
+        if msg == "stop_capture":
+            selectedIds = parameters.get("id")
+            print("selectedIds", selectedIds)
+            from .cameraActions import stop
+
+            result = await stop(selectedIds)
 
         response.body["message"] = result
         response.body["method"] = msg
-
         return response
 
     async def check_height(self, ids, alt, speed, res):
@@ -1458,6 +1618,7 @@ class SkybrushServer(DaemonApp):
 
                     alts = getAlts()
                     uav = self.find_uav_by_id(id)
+
                     alt = alts[uav.id]
                     coords = GPSCoordinate(lat=res[i][0], lon=res[i][1], ahl=alt)
                     if uav:
@@ -1501,20 +1662,11 @@ class SkybrushServer(DaemonApp):
         uav_ids: Sequence[str] = parameters.pop("ids", ())
         transport: Any = parameters.get("transport")
 
-        if message_type == "X-UAV-TAKEOFF":
+        if message_type == "UAV-TAKEOFF":
             from .socket.globalVariable import update_Takeoff_Alt
 
             alt = parameters.pop("alt")
             update_Takeoff_Alt(alt)
-            point = parameters.pop("coords")
-            log.warning(str(point))
-            speed = parameters.pop("speed")
-            from .VTOL.new_left import generate_XY_Positions
-
-            res = generate_XY_Positions(10, 0, -100, point)
-            log.warning(str(res))
-            self.run_in_background(self.check_height, uav_ids, alt - 1, speed, res)
-            # self.run_in_background(self.send_guided_command,uav_ids,speed,res)
 
         # Sort the UAVs being targeted by drivers. If `transport` is a
         # TransportOptions object and it indicates that we should ignore the
@@ -1757,7 +1909,7 @@ class SkybrushServer(DaemonApp):
 
         # Create an object that can be used to get hold of commonly used
         # directories within the app
-        self.dirs = AppDirs("Dhaksha Live", "Fixedwing VTOL")
+        self.dirs = AppDirs("XAG Backend Live", "Fixedwing VTOL")
 
         # Create an object to hold information about all the registered
         # communication channel types that the server can handle
@@ -2255,7 +2407,7 @@ async def handle_single_uav_operations(
     "UAV-TEST",
     "UAV-VER",
     "UAV-WAKEUP",
-    "X-UAV-TAKEOFF",
+    "UAV-TAKEOFF",
     "X-UAV-GUIDED",
     "X-UAV-socket",
     "X-UAV-MISSION",
@@ -2267,8 +2419,14 @@ async def handle_multi_uav_operations(
 ):
     if message.get_type() == "X-UAV-socket" or message.get_type() == "X-UAV-MISSION":
         return await app.socket_response(message, sender)
+
     else:
         return await app.dispatch_to_uavs(message, sender)
+
+
+@app.message_hub.on("X-CAMERA")
+async def handleCAMERA(message: FlockwaveMessage, sender: Client, hub: MessageHub):
+    return await app.camera_handler(message, sender)
 
 
 @app.message_hub.on("X-VTOL-MISSION")

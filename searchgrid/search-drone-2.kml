@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document id="259">
+        <Style id="262">
+            <LineStyle id="263">
+                <color>ff0000ff</color>
+                <colorMode>normal</colorMode>
+                <width>2</width>
+            </LineStyle>
+        </Style>
+        <Placemark id="261">
+            <name>Drone 2 Path</name>
+            <styleUrl>#262</styleUrl>
+            <LineString id="260">
+                <altitudeMode>clampToGround</altitudeMode>
+                <coordinates>80.05364819056695,12.927568097448031,0.0 80.05364819056695,12.929315139494403,0.0 80.05425900004839,12.929389041672811,0.0 80.05425900004839,12.927394240812129,0.0 80.05486980952985,12.927777095772344,0.0 80.05486980952985,12.929462943851222,0.0 80.05548061901129,12.929536846029631,0.0 80.05548061901129,12.929193003600714,0.0</coordinates>
+            </LineString>
+        </Placemark>
+        <Placemark id="265">
+            <name>1</name>
+            <Point id="264">
+                <coordinates>80.05364819056695,12.927568097448031,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="267">
+            <name>2</name>
+            <Point id="266">
+                <coordinates>80.05364819056695,12.929315139494403,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="269">
+            <name>3</name>
+            <Point id="268">
+                <coordinates>80.05425900004839,12.929389041672811,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="271">
+            <name>4</name>
+            <Point id="270">
+                <coordinates>80.05425900004839,12.927394240812129,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="273">
+            <name>5</name>
+            <Point id="272">
+                <coordinates>80.05486980952985,12.927777095772344,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="275">
+            <name>6</name>
+            <Point id="274">
+                <coordinates>80.05486980952985,12.929462943851222,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="277">
+            <name>7</name>
+            <Point id="276">
+                <coordinates>80.05548061901129,12.929536846029631,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="279">
+            <name>8</name>
+            <Point id="278">
+                <coordinates>80.05548061901129,12.929193003600714,0.0</coordinates>
+            </Point>
+        </Placemark>
+    </Document>
+</kml>

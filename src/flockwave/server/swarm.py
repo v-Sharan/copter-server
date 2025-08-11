@@ -1,8 +1,14 @@
 import socket, time, csv
 from math import radians, cos, sin, sqrt, atan2
-from .search import BezierCurve
+from .search import SearchGridGenerator, PolygonSearchGrid
+from .navigate import NavigationGridGenerator
 from .AutoMission import AutoSplitMission
-from .time import TimeCalculation
+from .latlon2xy import distance_bearing
+
+# from .SpecificSplitMission import SpecificSplitMission
+# from .time import TimeCalculation
+from .multipoly_specificgrid import PolygonSpecificSplit
+from .multipoly_grid import PolygonAutoSplit
 
 
 def fetch_file_content(file_path):
@@ -27,21 +33,41 @@ def fetch_file_content(file_path):
     return lines
 
 
-master_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# master_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-adderss = {1: ("192.168.6.203", 12002), 2: ("192.168.6.203", 12008)}
+# adderss = {1: ("192.168.6.200", 12002), 2: ("192.168.6.200", 12008)}
 
-master_num = 0
-# udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# server_address1 = ('192.168.6.151', 12008)
+
+def compute_grid_spacing(uav_altitude, zoom_step, overlap_percentage):
+    print(
+        "uav_altitude, zoom_step, overlap_percentage",
+        uav_altitude,
+        zoom_step,
+        overlap_percentage,
+    )
+    sensor_width = 34.6
+    sensor_height = 24.9
+    focal_length = 21
+
+    dx = (uav_altitude / (focal_length * zoom_step)) * sensor_width
+    dy = (uav_altitude / (focal_length * zoom_step)) * sensor_height
+
+    grid_spacing = dx * (1 - (overlap_percentage / 100))
+
+    return int(grid_spacing)
+
+
+master_num = -1
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address1 = ("192.168.6.151", 12008)
 # udp_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# server_address2 = ('192.168.6.152', 12008)
-udp_socket3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address3 = ("192.168.6.153", 12008)
+# server_address2 = ("192.168.6.152", 12008)
+# udp_socket3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address3 = ("192.168.6.153", 12008)
 # udp_socket4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # server_address4 = ('192.168.6.154', 12008)
-udp_socket5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address5 = ("192.168.6.155", 12008)
+# udp_socket5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address5 = ("192.168.6.155", 12008)
 # udp_socket6 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # server_address6 = ('192.168.6.156', 12008)
 # udp_socket7 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -50,17 +76,26 @@ server_address5 = ("192.168.6.155", 12008)
 # server_address8 = ('192.168.6.158', 12008)
 # udp_socket9 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # server_address9 = ('192.168.6.159', 12008)
-udp_socket10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address10 = ("192.168.6.160", 12008)
+# udp_socket10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address10 = ("192.168.6.160", 12008)
 
-# share_data_udp_socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# share_data_server_address1 = ('192.168.6.151', 12008)
-# share_data_udp_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# share_data_server_address2 = ('192.168.6.152', 12008)
+addersses = {
+    0: {"control": ("192.168.6.210", 12002), "data": ("192.168.6.210", 12008)},
+    1: {"control": ("192.168.6.151", 12002), "data": ("192.168.6.151", 12008)},
+    2: {"control": ("192.168.6.154", 12002), "data": ("192.168.6.154", 12008)},
+    3: {"control": ("192.168.6.153", 12002), "data": ("192.168.6.153", 12008)},
+    4: {"control": ("192.168.6.154", 12002), "data": ("192.168.6.154", 12008)},
+    5: {"control": ("192.168.6.155", 12002), "data": ("192.168.6.155", 12008)},
+}
+
+share_data_udp_socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+share_data_server_address1 = ("192.168.6.151", 12008)
+share_data_udp_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+share_data_server_address2 = ("192.168.6.152", 12008)
 share_data_udp_socket3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 share_data_server_address3 = ("192.168.6.153", 12008)
-# share_data_udp_socket4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# share_data_server_address4 = ('192.168.6.154', 12008)
+share_data_udp_socket4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+share_data_server_address4 = ("192.168.6.154", 12008)
 share_data_udp_socket5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 share_data_server_address5 = ("192.168.6.155", 12008)
 # udp_socket6 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -71,19 +106,19 @@ share_data_server_address5 = ("192.168.6.155", 12008)
 # server_address8 = ('192.168.6.158', 12008)
 # udp_socket9 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # server_address9 = ('192.168.6.159', 12008)
-share_data_udp_socket10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-share_data_server_address10 = ("192.168.6.160", 12008)
+# share_data_udp_socket10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# share_data_server_address10 = ("192.168.6.160", 12008)
 
 # socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# server_address11 = ('192.168.6.151', 12002)
+# server_address11 = ("192.168.6.151", 12002)
 # socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# server_address12 = ('192.168.6.152', 12002)
-socket3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address13 = ("192.168.6.153", 12002)
+# server_address12 = ("192.168.6.152", 12002)
+# socket3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address13 = ("192.168.6.153", 12002)
 # socket4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # server_address14 = ('192.168.6.154', 12002)
-socket5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address15 = ("192.168.6.155", 12002)
+# socket5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address15 = ("192.168.6.155", 12002)
 # socket6 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # server_address16 = ('192.168.6.156', 12002)
 # socket7 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -92,17 +127,17 @@ server_address15 = ("192.168.6.155", 12002)
 # server_address18 = ('192.168.6.158', 12002)
 # socket9 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # server_address19 = ('192.168.6.159', 12002)
-socket10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address20 = ("192.168.6.160", 12002)
+# socket10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# server_address20 = ("192.168.6.160", 12002)
 
-# file_sock1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# file_server_address1 = ('192.168.6.151', 12003)
-# file_sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# file_server_address2 = ('192.168.6.152', 12003)
+file_sock1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+file_server_address1 = ("192.168.6.151", 12003)
+file_sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+file_server_address2 = ("192.168.6.154", 12003)
 file_sock3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 file_server_address3 = ("192.168.6.153", 12003)
-# file_sock4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# file_server_address4 = ('192.168.6.154', 12003)
+file_sock4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+file_server_address4 = ("192.168.6.154", 12003)
 file_sock5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 file_server_address5 = ("192.168.6.155", 12003)
 # file_sock6 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -113,24 +148,23 @@ file_server_address5 = ("192.168.6.155", 12003)
 # file_server_address8 = ('192.168.6.158', 12003)
 # file_sock9 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # file_server_address9 = ('192.168.6.159', 12003)
-file_sock10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-file_server_address10 = ("192.168.6.160", 12003)
+# file_sock10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# file_server_address10 = ("192.168.6.160", 12003)
 
-"""
 mavlink_sock1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-mavlink_server_address1 = ('192.168.6.151', 12045)
+mavlink_server_address1 = ("192.168.6.151", 12045)
 
 mavlink_sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-mavlink_server_address2 = ('192.168.6.152', 12045)
-"""
+mavlink_server_address2 = ("192.168.6.152", 12045)
+
 mavlink_sock3 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 mavlink_server_address3 = ("192.168.6.153", 12045)
 
 # mavlink_sock4 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # mavlink_server_address4 = ('192.168.6.154', 12045)
 
-mavlink_sock5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-mavlink_server_address5 = ("192.168.6.155", 12045)
+# mavlink_sock5 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# mavlink_server_address5 = ("192.168.6.155", 12045)
 
 # mavlink_sock6 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # mavlink_server_address6 = ('192.168.6.156', 12045)
@@ -144,8 +178,8 @@ mavlink_server_address5 = ("192.168.6.155", 12045)
 # mavlink_sock9 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # mavlink_server_address9 = ('192.168.0.159', 12045)
 
-mavlink_sock10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-mavlink_server_address10 = ("192.168.6.160", 12045)
+# mavlink_sock10 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# mavlink_server_address10 = ("192.168.6.160", 12045)
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -210,31 +244,29 @@ def clear_csv():
     global udp_socket, udp_socket2, server_address1, server_address2
     # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     data = "clear_csv"
-    """
+
     udp_socket.sendto(str(data).encode(), server_address1)
     time.sleep(0.5)
     udp_socket2.sendto(str(data).encode(), server_address2)
     time.sleep(0.5)
-    """
+
     udp_socket3.sendto(str(data).encode(), server_address3)
     time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """       
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)       
-    udp_socket7.sendto(str(data).encode(), server_address7)     
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
+
+    # udp_socket4.sendto(str(data).encode(), server_address4)
+    # time.sleep(0.5)
+    # udp_socket5.sendto(str(data).encode(), server_address5)
+    # time.sleep(0.5)
+
+    # udp_socket6.sendto(str(data).encode(), server_address6)
+    # time.sleep(0.5)
+    # udp_socket7.sendto(str(data).encode(), server_address7)
+    # time.sleep(0.5)
+    # udp_socket8.sendto(str(data).encode(), server_address8)
+    # time.sleep(0.5)
+    # udp_socket9.sendto(str(data).encode(), server_address9)
+    # time.sleep(0.5)
+    # udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
@@ -243,34 +275,33 @@ def start_socket():
     global udp_socket, udp_socket2, server_address1, server_address2
     # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     data = "start"
-    """
+
     udp_socket.sendto(str(data).encode(), server_address1)
     time.sleep(0.5)
     udp_socket2.sendto(str(data).encode(), server_address2)
     time.sleep(0.5)
-    """
+
     udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
+    # time.sleep(0.5)
 
-    udp_socket7.sendto(str(data).encode(), server_address7)
-    time.sleep(0.5)
+    # udp_socket4.sendto(str(data).encode(), server_address4)
+    # time.sleep(0.5)
 
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
+    # udp_socket5.sendto(str(data).encode(), server_address5)
+    # time.sleep(0.5)
 
+    # udp_socket6.sendto(str(data).encode(), server_address6)
+    # time.sleep(0.5)
+
+    # udp_socket7.sendto(str(data).encode(), server_address7)
+    # time.sleep(0.5)
+
+    # udp_socket8.sendto(str(data).encode(), server_address8)
+    # time.sleep(0.5)
+    # udp_socket9.sendto(str(data).encode(), server_address9)
+    # time.sleep(0.5)
+
+    # udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
@@ -279,33 +310,27 @@ def start1_socket():
     global udp_socket, server_address1, server_address2, udp_socket2
     # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     data = "start1"
-    """
+
     udp_socket.sendto(str(data).encode(), server_address1)
     time.sleep(0.5)
     udp_socket2.sendto(str(data).encode(), server_address2)
     time.sleep(0.5)
-    """
+
     udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
-
-    udp_socket7.sendto(str(data).encode(), server_address7)
-
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
+    # time.sleep(0.5)
+    # udp_socket4.sendto(str(data).encode(), server_address4)
+    # time.sleep(0.5)
+    # udp_socket5.sendto(str(data).encode(), server_address5)
+    # time.sleep(0.5)
+    # udp_socket6.sendto(str(data).encode(), server_address6)
+    # time.sleep(0.5)
+    # udp_socket7.sendto(str(data).encode(), server_address7)
+    # time.sleep(0.5)
+    # udp_socket8.sendto(str(data).encode(), server_address8)
+    # time.sleep(0.5)
+    # udp_socket9.sendto(str(data).encode(), server_address9)
+    # time.sleep(0.5)
+    # udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
@@ -314,66 +339,59 @@ def home_lock():
     global udp_socket, server_address1, server_address2, udp_socket2
     # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     data = "home_lock"
-    """
+
     udp_socket.sendto(str(data).encode(), server_address1)
     time.sleep(0.5)
     udp_socket2.sendto(str(data).encode(), server_address2)
     time.sleep(0.5)
-    """
     udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
+    # time.sleep(0.5)
 
-    udp_socket7.sendto(str(data).encode(), server_address7)
+    # udp_socket4.sendto(str(data).encode(), server_address4)
+    # time.sleep(0.5)
+    # udp_socket5.sendto(str(data).encode(), server_address5)
+    # time.sleep(0.5)
+    # udp_socket6.sendto(str(data).encode(), server_address6)
+    # time.sleep(0.5)
 
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
+    # udp_socket7.sendto(str(data).encode(), server_address7)
+
+    # time.sleep(0.5)
+    # udp_socket8.sendto(str(data).encode(), server_address8)
+    # time.sleep(0.5)
+    # udp_socket9.sendto(str(data).encode(), server_address9)
+    # time.sleep(0.5)
+    # udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
 def select_plot(filename):
     if filename != "":
 
-        """
-        file_sock1.sendto(str(filename).encode(),file_server_address1)
+        file_sock1.sendto(str(filename).encode(), file_server_address1)
         time.sleep(0.5)
-        file_sock2.sendto(str(filename).encode(),file_server_address2)
+        file_sock2.sendto(str(filename).encode(), file_server_address2)
         time.sleep(0.5)
-        """
         file_sock3.sendto(str(filename).encode(), file_server_address3)
-        time.sleep(0.5)
-        """
-        file_sock4.sendto(str(filename).encode(),file_server_address4)
-        time.sleep(0.5)
-        """
-        file_sock5.sendto(str(filename).encode(), file_server_address5)
-        time.sleep(0.5)
-        """
-        file_sock6.sendto(str(filename).encode(),file_server_address6)
-        time.sleep(0.5)
+        # time.sleep(0.5)
 
-        file_sock7.sendto(str(filename).encode(),file_server_address7)		
-        time.sleep(0.5)
+        # file_sock4.sendto(str(filename).encode(),file_server_address4)
+        # time.sleep(0.5)
 
-        file_sock8.sendto(str(filename).encode(),file_server_address8)
-        time.sleep(0.5)
-        file_sock9.sendto(str(filename).encode(),file_server_address9)
-        time.sleep(0.5)
-        """
-        file_sock10.sendto(str(filename).encode(), file_server_address10)
+        # file_sock5.sendto(str(filename).encode(), file_server_address5)
+        # time.sleep(0.5)
+
+        # file_sock6.sendto(str(filename).encode(),file_server_address6)
+        # time.sleep(0.5)
+
+        # file_sock7.sendto(str(filename).encode(),file_server_address7)
+        # time.sleep(0.5)
+
+        # file_sock8.sendto(str(filename).encode(),file_server_address8)
+        # time.sleep(0.5)
+        # file_sock9.sendto(str(filename).encode(),file_server_address9)
+        # time.sleep(0.5)
+        # file_sock10.sendto(str(filename).encode(), file_server_address10)
         return True
 
 
@@ -519,410 +537,179 @@ def share_data_func():
 
 
 def disperse_socket():
-    global udp_socket, server_address1, server_address2, udp_socket2
+    global udp_socket, master_num
     print("Disperse!!!!!!")
     # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     data = "disperse"
-    """
-    udp_socket.sendto(str(data).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(data).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
-    udp_socket7.sendto(str(data).encode(), server_address7)
-
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
 def takeoff_socket(alt):
     print("Takeoff...........")
     takeoff_alt = alt
-    global udp_socket, server_address1, server_address2, udp_socket2
-    # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    global udp_socket, master_num
     data = "takeoff" + "," + str(takeoff_alt)
-    """
-    sent = udp_socket.sendto(str(data).encode(), server_address1)
-    time.sleep(0.5)
-    sent = udp_socket2.sendto(str(data).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    sent = udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    sent = udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    sent = udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    sent = udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
-    sent = udp_socket7.sendto(str(data).encode(), server_address7)
-
-    time.sleep(0.5)
-    sent = udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    sent = udp_socket9.sendto(str(data).encode(), server_address9)
-
-    time.sleep(0.5)
-    """
-    sent = udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
-def search_socket(points, gridspacing, coverage, ids):
-    global master_udp
+def search_socket(points, camAlt, overlap, zoomLevel, coverage, ids):
+    global udp_socket, master_num
     # global udp_socket,server_address1,server_address2,udp_socket2
-    print("Searching........")
+    print("Searching........", points, len(points))
     # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     for num in points:
         num.reverse()
-    data = str(
-        "search"
-        + ","
-        + str(points[0][0])
-        + ","
-        + str(points[0][1])
-        + ","
-        + str(len(ids))
-        + ","
-        + str(gridspacing)
-        + ","
-        + str(coverage)
-    )
-    print(points, len(ids), gridspacing, coverage)
-    master_udp.sendto(data.encode(), adderss.get(2))
-    curve = BezierCurve(
-        center_latitude=points[0][0],
-        center_longitude=points[0][1],
-        coverage_area=coverage,
-        grid_space=gridspacing,
-        num_of_drones=len(ids),
-    )
-    curve.GridFormation()
-    curve.generate_bezier_curve()
-    path = curve.return_latlon()
-    time_sample = TimeCalculation(
-        missions=curve.search_grid, speed=18, loiter_radius=200
-    )
-    """
-    udp_socket.sendto(str(data).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(data).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    # udp_socket3.sendto(str(data).encode(), server_address3)
-    # time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    # udp_socket5.sendto(str(data).encode(), server_address5)
-    #
-    # time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)          
-    udp_socket7.sendto(str(data).encode(), server_address7) 
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)    
-    time.sleep(0.5)
-    """
-    # udp_socket10.sendto(str(data).encode(), server_address10)
-    return path, time_sample.max_time()
+    gridspacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
+    print("gridspacing", gridspacing)
+    if len(points) == 1:
+        data = str(
+            "search"
+            + ","
+            + str(points[0][0])
+            + ","
+            + str(points[0][1])
+            + ","
+            + str(len(ids))
+            + ","
+            + str(gridspacing)
+            + ","
+            + str(coverage)
+        )
+        print(data, points, len(ids), gridspacing, coverage)
+        udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
+        curve = SearchGridGenerator(
+            origin=(12.582228, 79.865131),
+            center_latitude=points[0][0],
+            center_longitude=points[0][1],
+            coverage_area=coverage,
+            grid_spacing=gridspacing,
+            num_of_drones=len(ids),
+        )
+        path = curve.generate_grids()
+        print("path", path)
+        # return path, 30
+
+    else:
+        gridspacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
+        print("gridspacing", gridspacing, type(gridspacing), int(gridspacing))
+        data = str(
+            "searchpolygon"
+            + "_"
+            + str(points)
+            + "_"
+            + str(len(ids))
+            + "_"
+            + str(gridspacing)
+        )
+        print(points, len(ids), gridspacing, coverage)
+        udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
+        planner = PolygonSearchGrid(
+            polygon_latlon=points,
+            origin_gps=(12.582228, 79.865131),
+            endDistance=500000,
+            num_drones=len(ids),
+            grid_spacing=gridspacing,
+            rotation_angle=90,
+            obstacles_latlon=[],
+        )
+
+        planner.generate_paths()
+        path = planner.save_paths()
+    return path, 30
 
 
-def aggregate_socket():
-    print("Aggregation..!!!!")
-    data = "aggregate"
-    """
-    udp_socket.sendto(str(data).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(data).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """     
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
+def aggregate_socket(points):
+    global udp_socket, master_num
+    print("Aggregation..!!!!", points)
+    data = str("aggregate" + "," + str(points[0][1]) + "," + str(points[0][0]))
 
-    udp_socket7.sendto(str(data).encode(), server_address7)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
 def home_socket():
+    global udp_socket, master_num
     print("Home....******")
     data = "home"
-    """
-    udp_socket.sendto(str(data).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(data).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
-    udp_socket7.sendto(str(data).encode(), server_address7)     
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)      
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
     return True
 
 
-def airport_selection(filename):
-    print(filename)
-    """
-    file_sock1.sendto(str(filename).encode(),file_server_address1)
-    time.sleep(0.5)
-    file_sock2.sendto(str(filename).encode(),file_server_address2)
-    time.sleep(0.5)
-    """
-    file_sock3.sendto(str(filename).encode(), file_server_address3)
-    time.sleep(0.5)
-    """
-    file_sock4.sendto(str(filename).encode(),file_server_address4)
-    time.sleep(0.5)
-    """
-    file_sock5.sendto(str(filename).encode(), file_server_address5)
-    time.sleep(0.5)
-    """
-    file_sock6.sendto(str(filename).encode(),file_server_address6)
-    time.sleep(0.5)
-    
-    file_sock7.sendto(str(filename).encode(),file_server_address7)		
-    time.sleep(0.5)
-    
-    file_sock8.sendto(str(filename).encode(),file_server_address8)
-    time.sleep(0.5)
-    file_sock9.sendto(str(filename).encode(),file_server_address9)
-    time.sleep(0.5)
-    """
-    file_sock10.sendto(str(filename).encode(), file_server_address10)
-    return True
+# def airport_selection(filename):
+#     print(filename)
+#     """
+#     file_sock1.sendto(str(filename).encode(),file_server_address1)
+#     time.sleep(0.5)
+#     file_sock2.sendto(str(filename).encode(),file_server_address2)
+#     time.sleep(0.5)
+#     """
+#     file_sock3.sendto(str(filename).encode(), file_server_address3)
+#     time.sleep(0.5)
+#     """
+#     file_sock4.sendto(str(filename).encode(),file_server_address4)
+#     time.sleep(0.5)
+#     """
+#     file_sock5.sendto(str(filename).encode(), file_server_address5)
+#     time.sleep(0.5)
 
 
 def different_alt_socket(initial_alt, alt_diff):
-    global master_udp
+    global udp_socket, master_num
     data = str(initial_alt) + str(",") + str(alt_diff)
     g = str("different" + "," + str(data))
     print(g)
-    master_udp.sendto(g.encode(), adderss.get(2))
-    """
-    udp_socket.sendto(str(g).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(g).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(g).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(g).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(g).encode(), server_address5)
-    time.sleep(0.5)
-    """
+    udp_socket.sendto(g.encode(), addersses[int(master_num)]["data"])
 
-    udp_socket6.sendto(str(g).encode(), server_address6)
-    time.sleep(0.5)
-
-    udp_socket7.sendto(str(g).encode(), server_address7)
-
-    time.sleep(0.5)
-    udp_socket8.sendto(str(g).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(g).encode(), server_address9)
-
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(g).encode(), server_address10)
     return True
 
 
-def same_alt_socket(alt_same):
-    print("Same_altitude")
-    data = alt_same
-    print(data, "data")
-    f = "same" + "," + str(data)
-    print(f, "f")
-    """
-    udp_socket.sendto(str(f).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(f).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(f).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(f).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(f).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(f).encode(), server_address6)
-    time.sleep(0.5)      
-    udp_socket7.sendto(str(f).encode(), server_address7)
+# def same_alt_socket(alt_same):
+#     global udp_socket, master_num
+#     print("Same_altitude")
+#     data = alt_same
+#     print(data, "data")
+#     f = "same" + "," + str(data)
+#     print(f, "f")
 
-    time.sleep(0.5)
-    udp_socket8.sendto(str(f).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(f).encode(), server_address9)       
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(f).encode(), server_address10)
-    return True
+#     udp_socket.sendto(str(f).encode(), server_address1)
+#     time.sleep(0.5)
+#     udp_socket2.sendto(str(f).encode(), server_address2)
+#     time.sleep(0.5)
+#     return True
 
 
-def home_goto_socket():
-    # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    data = "home_goto"
+def land_socket():
+    global udp_socket, master_num
+    data = "land"
     print(data)
-    """
-    udp_socket.sendto(str(data).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(data).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
-    udp_socket7.sendto(str(data).encode(), server_address7)
-
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
-def rtl_socket():
-    global socket, udp_socket, server_address1, server_address2, udp_socket2
-    # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    data = "rtl"
-    """
-    udp_socket.sendto(str(data).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(data).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)      
-    udp_socket7.sendto(str(data).encode(), server_address7)       
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)      
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
-    return True
+# def rtl_socket():
+#     global socket, udp_socket, master_num
+#     data = "rtl"
+#     master_udp.sendto(data.encode(), adderss.get(2))
+#     return True
 
 
 def stop_socket():
     print("STOP>>>>>>>>>>>>")
-    global master_udp
+    global master_num, socket
     data = "stop"
-    master_udp.sendto(data.encode(), adderss.get(1))
+    print("master_num", master_num)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["control"])
+    print("addersses[int(master_num)]", addersses[int(master_num)])
 
-    # socket1.sendto(str(data).encode(), server_address11)
-    # time.sleep(0.5)
-    # socket2.sendto(str(data).encode(), server_address12)
-    # time.sleep(0.5)
-    #
-    # socket3.sendto(str(data).encode(), server_address13)
-    # time.sleep(0.5)
-    #
-    # socket4.sendto(str(data).encode(), server_address14)
-    # time.sleep(0.5)
-    #
-    # socket5.sendto(str(data).encode(), server_address15)
-    # time.sleep(0.5)
-    #
-    # socket6.sendto(str(data).encode(), server_address16)
-    # time.sleep(0.5)
-    #
-    # socket7.sendto(str(data).encode(), server_address17)
-    #
-    # time.sleep(0.5)
-    # socket8.sendto(str(data).encode(), server_address18)
-    # time.sleep(0.5)
-    # socket9.sendto(str(data).encode(), server_address19)
-    # time.sleep(0.5)
-    #
-    # socket10.sendto(str(data).encode(), server_address20)
     return True
 
 
@@ -959,203 +746,129 @@ def return_socket():
     udp_socket9.sendto(str(data).encode(), server_address9)
     time.sleep(0.5)
     """
-    udp_socket10.sendto(str(data).encode(), server_address10)
+    # udp_socket10.sendto(str(data).encode(), server_address10)
     return True
+
+
+# def specific_bot_goal_socket(drone_num, goal_num):
+#     global master_num, udp_socket
+#     print("$$$##Specific_bot_goal###")
+#     data = (
+#         "specific_bot_goal"
+#         + ","
+#         + str(drone_num[0])
+#         + ","
+#         + str(goal_num[0][1])
+#         + ","
+#         + str(goal_num[0][0])
+#     )
+#     print("d", data)
+#     udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
+#     return True
 
 
 def specific_bot_goal_socket(drone_num, goal_num):
+    global master_num, udp_socket
     print("$$$##Specific_bot_goal###")
-    d = "specific_bot_goal" + "," + str(drone_num) + "," + str(goal_num)
-    print("d", d)
-    """
-    udp_socket.sendto(str(d).encode(), server_address1)
-    time.sleep(0.5)
-    udp_socket2.sendto(str(d).encode(), server_address2)
-    time.sleep(0.5)
-    """
-    udp_socket3.sendto(str(d).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(d).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(d).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(d).encode(), server_address6)
-    time.sleep(0.5)
+    for num in goal_num:
+        num.reverse()
+    data = "specificbotgoal" + "_" + str(drone_num[0]) + "_" + str(goal_num)
+    print("d", data, addersses[int(master_num)]["data"])
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
-    udp_socket7.sendto(str(d).encode(), server_address7)
-
-    time.sleep(0.5)
-    udp_socket8.sendto(str(d).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(d).encode(), server_address9)
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(d).encode(), server_address10)
     return True
 
 
-def goal_socket(goal_num, direction, radius):
+def goal_socket(goal_num):
+    global master_num, udp_socket
     print("***Group goal*****!!!!!")
     for num in goal_num:
         num.reverse()
-    data = str("goal" + "_" + str(goal_num) + "_" + str(direction) + "_" + str(radius))
+    data = str("goal" + "_" + str(goal_num))
     print("d", data)
-    master_udp.sendto(data.encode(), adderss.get(2))
-    # udp_socket.sendto(str(d).encode(), server_address1)
-    # time.sleep(0.5)
-    # udp_socket2.sendto(str(d).encode(), server_address2)
-    # time.sleep(0.5)
-    #
-    # # udp_socket3.sendto(str(d).encode(), server_address3)
-    # # time.sleep(0.5)
-    # udp_socket4.sendto(str(d).encode(), server_address4)
-    # time.sleep(0.5)
-    #
-    # udp_socket5.sendto(str(d).encode(), server_address5)
-    # time.sleep(0.5)
-    #
-    # udp_socket6.sendto(str(d).encode(), server_address6)
-    # time.sleep(0.5)
-    #
-    # udp_socket7.sendto(str(d).encode(), server_address7)
-    #
-    # time.sleep(0.5)
-    # udp_socket8.sendto(str(d).encode(), server_address8)
-    # time.sleep(0.5)
-    # udp_socket9.sendto(str(d).encode(), server_address9)
-    # time.sleep(0.5)
-    #
-    # udp_socket10.sendto(str(d).encode(), server_address10)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+    print("addersses[int(master_num)]", addersses[int(master_num)]["data"])
     return True
 
 
-def master(master_num):
-
+def master(master_number):
+    global master_num, udp_socket
+    master_num = int(master_number)
     data = "master" + "-" + str(master_num)
     print("data", data)
-    """
-    socket1.sendto(str(data).encode(), server_address11)
-    time.sleep(0.5)
-    socket2.sendto(str(data).encode(), server_address12)
-    time.sleep(0.5)
-    """
-    socket3.sendto(str(data).encode(), server_address13)
-    time.sleep(0.5)
-    """
-    socket4.sendto(str(data).encode(), server_address14)
-    time.sleep(0.5)
-    """
-    socket5.sendto(str(data).encode(), server_address15)
-    time.sleep(0.5)
-    """
-    socket6.sendto(str(data).encode(), server_address16)
-    time.sleep(0.5)
-
-    socket7.sendto(str(data).encode(), server_address17)
-
-    time.sleep(0.5)
-    socket8.sendto(str(data).encode(), server_address18)
-    time.sleep(0.5)
-    socket9.sendto(str(data).encode(), server_address19)
-    time.sleep(0.5)
-    """
-    socket10.sendto(str(data).encode(), server_address20)
-    result = mavlink_add(master_num)
-    return result
+    for uav_id, ports in addersses.items():
+        try:
+            udp_socket.sendto(data.encode(), ports["control"])
+            print(f"✅ Sent to UAV {uav_id}: {ports['control']}")
+        except Exception as e:
+            print(f"❌ Error sending to UAV {uav_id}: {e}")
+    return True
 
 
 def mavlink_add(uav):
-    global master_udp
+    global master_num, udp_socket
     data = str(str("add") + "," + str(uav))
     print(data)
-    master_udp.sendto(data.encode(), adderss.get(2))
-    """
-    mavlink_sock1.sendto((data+port_array[0]).encode(), mavlink_server_address1)
-    time.sleep(0.5)
-    mavlink_sock2.sendto((data+port_array[1]).encode(), mavlink_server_address2)
-    time.sleep(0.5)
-   
-    mavlink_sock3.sendto((data+port_array[2]).encode(), mavlink_server_address3)
-    time.sleep(0.5)
-    
-    mavlink_sock4.sendto((data+port_array[3]).encode(), mavlink_server_address4)
-    time.sleep(0.5)
-  
-    mavlink_sock5.sendto((data+port_array[4]).encode(), mavlink_server_address5)
-    time.sleep(0.5)
-   
-    mavlink_sock6.sendto((data+port_array[5]).encode(), mavlink_server_address6)
-    time.sleep(0.5)
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
-    mavlink_sock7.sendto((data+port_array[6]).encode(), mavlink_server_address7)
-
-    time.sleep(0.5)
-    mavlink_sock8.sendto((data+port_array[7]).encode(), mavlink_server_address8)
-    time.sleep(0.5)
-    mavlink_sock9.sendto((data+port_array[8]).encode(), mavlink_server_address9)
-    time.sleep(0.5)
-    mavlink_sock10.sendto((data+port_array[9]).encode(), mavlink_server_address10)
-    """
     return True
 
 
 def mavlink_remove(uav):
-    global master_udp
+    global master_num, udp_socket
     data = str("remove" + "," + str(uav))
     print(data)
-    master_udp.sendto(data.encode(), adderss.get(2))
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
     return True
 
 
 def bot_remove(remove_uav_num):
+    global udp_socket, udp_socket2, udp_socket3, server_address1, server_address2, server_address3
+
     print("!!!bot_remove!!")
 
     data = "remove_bot" + "," + str(remove_uav_num)
     print("remove_link_num", remove_uav_num)
-    """
     udp_socket.sendto(str(data).encode(), server_address1)
     time.sleep(0.5)
     udp_socket2.sendto(str(data).encode(), server_address2)
     time.sleep(0.5)
-    """
     udp_socket3.sendto(str(data).encode(), server_address3)
-    time.sleep(0.5)
-    """
-    udp_socket4.sendto(str(data).encode(), server_address4)
-    time.sleep(0.5)
-    """
-    udp_socket5.sendto(str(data).encode(), server_address5)
-    time.sleep(0.5)
-    """
-    udp_socket6.sendto(str(data).encode(), server_address6)
-    time.sleep(0.5)
+    # time.sleep(0.5)
+    # udp_socket4.sendto(str(data).encode(), server_address4)
+    # time.sleep(0.5)
+    # udp_socket5.sendto(str(data).encode(), server_address5)
+    # time.sleep(0.5)
+    # udp_socket6.sendto(str(data).encode(), server_address6)
+    # time.sleep(0.5)
 
-    udp_socket7.sendto(str(data).encode(), server_address7)
+    # udp_socket7.sendto(str(data).encode(), server_address7)
 
-    time.sleep(0.5)
-    udp_socket8.sendto(str(data).encode(), server_address8)
-    time.sleep(0.5)
-    udp_socket9.sendto(str(data).encode(), server_address9)
-    time.sleep(0.5)
-    """
-    udp_socket10.sendto(str(data).encode(), server_address10)
+    # time.sleep(0.5)
+    # udp_socket8.sendto(str(data).encode(), server_address8)
+    # time.sleep(0.5)
+    # udp_socket9.sendto(str(data).encode(), server_address9)
+    # time.sleep(0.5)
+    # udp_socket10.sendto(str(data).encode(), server_address10)
     return True
 
 
 def landing_mission_send(mission):
     for num in mission:
         num.reverse()
-    global master_udp
+    global udp_socket
+
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
     data = str("home,{}".format(mission))
-    master_udp.sendto(data.encode(), adderss.get(2))
     return True
 
 
-def navigate(center_latlon, gridspacing, coverage, ids):
-    global master_udp
+def navigate(center_latlon, camAlt, overlap, zoomLevel, coverage, ids):
+    gridspacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
+    global master_num, udp_socket
     latlng = str(str(center_latlon[0][1]) + "," + str(center_latlon[0][0]))
     data = str(
         "navigate"
@@ -1169,89 +882,134 @@ def navigate(center_latlon, gridspacing, coverage, ids):
         + str(coverage)
     )
 
-    master_udp.sendto(data.encode(), adderss.get(2))
-    curve = BezierCurve(
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
+    curve = NavigationGridGenerator(
+        origin=(12.582228, 79.865131),
         center_latitude=center_latlon[0][1],
         center_longitude=center_latlon[0][0],
-        coverage_area=coverage,
-        grid_space=gridspacing,
         num_of_drones=1,
+        grid_spacing=gridspacing,
+        coverage_area=coverage,
     )
-    curve.GridFormation()
-    curve.generate_bezier_curve()
-    path = curve.return_latlon()
-    time_sample = TimeCalculation(
-        missions=curve.search_grid, speed=18, loiter_radius=200
-    )
-    return path, time_sample.max_time()
+    path = curve.navigate_grid()
+    print("path", path)
+    return path
 
 
 def loiter(center_latlon, direction):
-    global master_udp
+    global udp_socket
     s = str(str(center_latlon[0][1]) + "," + str(center_latlon[0][0]))
     data = str("loiter pointer" + "," + str(s) + "," + str(direction))
     print(data)
-    master_udp.sendto(data.encode(), adderss.get(2))
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
     return True
 
 
 def skip_point(skip_waypoint):
-    global master_udp
+    global udp_socket
     data = str("skip" + "," + str(skip_waypoint))
-    master_udp.sendto(data.encode(), adderss.get(2))
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
     return True
 
 
 def send_alts(alts):
-    global master_udp
     data = str("alt" + "," + str(alts))
     print(data, adderss.get(2))
-    master_udp.sendto(data.encode(), adderss.get(2))
+
     return True
 
 
-def splitmission(center_latlon, uavs, gridspace, coverage):
-    global master_udp
-    # group_split_center_lat_lon_array_len(uavs)_grid_space_coverage_area
+def splitmission(center_latlon, uavs, gridspace, coverage, featureType):
+    global master_num, udp_socket
     for latlon in center_latlon:
         latlon.reverse()
-    data = str(
-        "split"
-        + "_"
-        + str(center_latlon)
-        + "_"
-        + str(len(uavs))
-        + "_"
-        + str(gridspace)
-        + "_"
-        + str(coverage)
-    )
-    master_udp.sendto(data.encode(), adderss.get(2))
-    split = AutoSplitMission(
-        center_lat_lons=center_latlon,
-        coverage_area=coverage,
-        num_of_drones=len(uavs),
-        grid_spacing=gridspace,
-    )
-    path = split.return_latlon()
-    return path
+    if featureType == "points":
+        data = str(
+            "split"
+            + "_"
+            + str(center_latlon)
+            + "_"
+            + str(len(uavs))
+            + "_"
+            + str(gridspace)
+            + "_"
+            + str(coverage)
+        )
+
+        udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+        center_latlon = [coord[0] for coord in center_latlon]
+        split = AutoSplitMission(
+            origin=(12.582228, 79.865131),
+            center_lat_lons=center_latlon,
+            num_of_drones=len(uavs),
+            grid_spacing=gridspace,
+            coverage_area=coverage,
+        )
+        isDone = split.GroupSplitting(
+            center_lat_lons=center_latlon,
+            num_of_drones=len(uavs),
+            grid_spacing=gridspace,
+            coverage_area=coverage,
+        )
+        # path = split.return_latlon()
+        # print("..................................", isDone, len(isDone))
+        return isDone
+    elif featureType == "polygon":
+        print("length..................", center_latlon, len(center_latlon))
+        data = str(
+            "polyautosplit"
+            + "_"
+            + str(center_latlon)
+            + "_"
+            + str(len(uavs))
+            + "_"
+            + str(gridspace)
+            + "_"
+            + str(coverage)
+        )
+
+        udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
+        planner = PolygonAutoSplit(
+            polygon_latlon_list=center_latlon,
+            origin_gps=(12.582228, 79.865131),
+            endDistance=500000,
+            num_drones=len(uavs),
+            grid_spacing=gridspace,
+            rotation_angle=90,
+            obstacles_latlon_list=[],
+        )
+
+        path1 = planner.generate_paths()
+        path = planner.save_paths()
+        # print(path, len(path), "SPLIT@")
+        return path
 
 
-def specificsplit(center_latlon, uavs, gridspace, coverage):
-    global master_udp
+def specificsplit(center_latlon, uavs, gridspace, coverage, featureType):
+    global master_num, udp_socket
     grid = []
     coverageSpace = []
     for i in range(len(uavs)):
         grid.append(gridspace)
         coverageSpace.append(coverage)
     print(center_latlon, uavs, gridspace, coverage)
+
     split = AutoSplitMission(
+        origin=(12.582228, 79.865131),
         center_lat_lons=center_latlon,
-        coverage_area=coverage,
         num_of_drones=len(uavs),
         grid_spacing=gridspace,
+        coverage_area=coverage,
     )
-    path = split.return_latlon()
+    path = split.GroupSplitting(
+        center_lat_lons=center_latlon,
+        num_of_drones=len(uavs),
+        grid_spacing=gridspace,
+        coverage_area=coverage,
+    )
     data = str(
         "specificsplit"
         + "_"
@@ -1263,8 +1021,16 @@ def specificsplit(center_latlon, uavs, gridspace, coverage):
         + "_"
         + str(coverageSpace)
     )
-    master_udp.sendto(data.encode(), adderss.get(2))
-    time_sample = TimeCalculation(
-        missions=split.search_grid, speed=20, loiter_radius=200
+    udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
+
+    return path
+
+
+def compute_antenna_az(
+    homeLattitude, homeLongitude, destinationLattitude, destinationLongitude
+):
+    az = distance_bearing(
+        homeLattitude, homeLongitude, destinationLattitude, destinationLongitude
     )
-    return path, time_sample.max_time()
+    print(az)
+    return az

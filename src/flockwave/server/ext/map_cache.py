@@ -99,6 +99,7 @@ async def get_tile(z: int, x: int, y: int):
 
     tile_dir = configuration.get("tile_dir", "tiles")
     # Get the tile directory from configuration
+    print(baseMap)
     tile_path = (
         Path(tile_dir)
         / Path(baseMap.split(".")[0])

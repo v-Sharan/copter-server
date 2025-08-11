@@ -1,3 +1,20 @@
+# import socket
+
+# sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+
+# def camera_control(msg, cameraip):
+#     global sock
+#     sock.sendto(msg, (cameraip, 14551))
+#     return True
+
+# except zoom_in,zoom_out,zoom_stop
+# packets = bytes.fromhex(stop)
+
+# for zoom_in,zoom_out,zoom_stop
+# packet = bytearray(zoom_in)
+# bytePacket = bytes(packet)
+
 Left = "EB 90 14 55 AA DC 11 30 01 F8 30 00 00 00 00 00 00 00 00 00 00 00 E8 2D"
 right = "EB 90 14 55 AA DC 11 30 01 07 D0 00 00 00 00 00 00 00 00 00 00 00 F7 EB"
 up = "EB 90 14 55 AA DC 11 30 01 00 00 07 D0 00 00 00 00 00 00 00 00 00 F7 EB"
