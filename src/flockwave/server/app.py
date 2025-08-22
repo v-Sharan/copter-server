@@ -454,8 +454,16 @@ class SkybrushServer(DaemonApp):
 
         for uav_id in uav_ids:
             uav = self.find_uav_by_id(uav_id, response)
-            if uav:
-                statuses[uav_id] = uav.status
+
+            # if uav:
+            #     if hasattr(self, "uavs_home") and self.uavs_home is not None:
+            #         [uav.status.distance, uav.status.bearing] = distance_bearing(
+            #             homeLattitude=self.uavs_home[uav_id][0],
+            #             homeLongitude=self.uavs_home[uav_id][1],
+            #             destinationLattitude=uav.status.position.lat,
+            #             destinationLongitude=uav.status.position.lon,
+            #         )
+            statuses[uav_id] = uav.status
 
         return response
 
@@ -1661,6 +1669,16 @@ class SkybrushServer(DaemonApp):
         message_type = parameters.pop("type")
         uav_ids: Sequence[str] = parameters.pop("ids", ())
         transport: Any = parameters.get("transport")
+        print(uav_ids, "uav_ids")
+        self.uavs_home = {}
+        for uav_id in uav_ids:
+
+            uav = self.find_uav_by_id(uav_id, response)
+            if uav:
+                self.uavs_home[uav_id] = [
+                    uav.status.position.lat,
+                    uav.status.position.lon,
+                ]
 
         if message_type == "UAV-TAKEOFF":
             from .socket.globalVariable import update_Takeoff_Alt

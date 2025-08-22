@@ -141,6 +141,7 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
     wind_speed: float
     bearing: float
     distance: float
+    # home: GPSCoordinate
 
     def __init__(
         self, id: Optional[str] = None, timestamp: Optional[TimestampLike] = None
@@ -176,6 +177,7 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
         self.wind_speed = 0.0
         self.bearing = 0.0
         self.distance = 0.0
+        # self.home = GPSCoordinate()
 
     @property
     def position_xyz(self) -> Optional[PositionXYZ]:
@@ -249,8 +251,8 @@ class UAVBase(UAV):
         self._id = id
         self._status = UAVStatusInfo(id=id)
         _gimbal_ip = {
-            "01": "192.168.6.211",
-            "02": "192.168.6.212",
+            "01": "192.168.6.122",
+            "02": "192.168.6.121",
             "03": "192.168.6.213",
             "04": "192.168.6.214",
             "05": "192.168.6.215",

@@ -29,6 +29,13 @@ def hex_to_decimal(hex_str):
     return int(hex_str, 16)
 
 
+def hex16_to_signed(val):
+    val = int(val, 16)
+    if val >= 0x8000:
+        val -= 0x10000
+    return val
+
+
 def send_command(socket, heartbeat):
     packet = bytearray(heartbeat)
     bytePacket = bytes(packet)
@@ -79,6 +86,15 @@ def send_command(socket, heartbeat):
         # print(f"Target Altitude: {target_altitude}")
         # Further interpretation can be done here based on protocol
         # For example, if the first byte indicates a status:
+        azimuth_angle = hex16_to_signed(hex_sequence[50:54])
+        azimuth_angle = azimuth_angle * 360 / 65536
+
+        pitch = hex16_to_signed(hex_sequence[54:58])
+        pitch = pitch * 360 / 65536
+
+        print(f"Azimuth angle: {azimuth_angle}")
+        print(f"Pitch: {pitch}")
+
         status = response[0]  # Example: first byte as status
         logging.info(f"Status: {status}")
 

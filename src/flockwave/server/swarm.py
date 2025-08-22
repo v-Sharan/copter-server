@@ -88,6 +88,10 @@ addersses = {
     5: {"control": ("192.168.6.155", 12002), "data": ("192.168.6.155", 12008)},
 }
 
+origin = (12.58228, 79.865131)  # hanumanthapuram
+# origin = (30.351921, 76.852759)  # chandiharh
+# origin = (12.961654, 80.041917)  # dce
+
 share_data_udp_socket1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 share_data_server_address1 = ("192.168.6.151", 12008)
 share_data_udp_socket2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -557,10 +561,11 @@ def takeoff_socket(alt):
 
 
 def search_socket(points, camAlt, overlap, zoomLevel, coverage, ids):
-    global udp_socket, master_num
+    global udp_socket, master_num, origin
     # global udp_socket,server_address1,server_address2,udp_socket2
     print("Searching........", points, len(points))
     # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    points = [[float(lon), float(lat)] for lon, lat in points]
     for num in points:
         num.reverse()
     gridspacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
@@ -583,7 +588,7 @@ def search_socket(points, camAlt, overlap, zoomLevel, coverage, ids):
         udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
         curve = SearchGridGenerator(
-            origin=(12.582228, 79.865131),
+            origin=origin,
             center_latitude=points[0][0],
             center_longitude=points[0][1],
             coverage_area=coverage,
@@ -611,7 +616,7 @@ def search_socket(points, camAlt, overlap, zoomLevel, coverage, ids):
 
         planner = PolygonSearchGrid(
             polygon_latlon=points,
-            origin_gps=(12.582228, 79.865131),
+            origin_gps=origin,
             endDistance=500000,
             num_drones=len(ids),
             grid_spacing=gridspacing,
@@ -750,27 +755,10 @@ def return_socket():
     return True
 
 
-# def specific_bot_goal_socket(drone_num, goal_num):
-#     global master_num, udp_socket
-#     print("$$$##Specific_bot_goal###")
-#     data = (
-#         "specific_bot_goal"
-#         + ","
-#         + str(drone_num[0])
-#         + ","
-#         + str(goal_num[0][1])
-#         + ","
-#         + str(goal_num[0][0])
-#     )
-#     print("d", data)
-#     udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
-
-#     return True
-
-
 def specific_bot_goal_socket(drone_num, goal_num):
     global master_num, udp_socket
     print("$$$##Specific_bot_goal###")
+    goal_num = [[float(lon), float(lat)] for lon, lat in goal_num]
     for num in goal_num:
         num.reverse()
     data = "specificbotgoal" + "_" + str(drone_num[0]) + "_" + str(goal_num)
@@ -783,6 +771,7 @@ def specific_bot_goal_socket(drone_num, goal_num):
 def goal_socket(goal_num):
     global master_num, udp_socket
     print("***Group goal*****!!!!!")
+    goal_num = [[float(lon), float(lat)] for lon, lat in goal_num]
     for num in goal_num:
         num.reverse()
     data = str("goal" + "_" + str(goal_num))
@@ -868,7 +857,7 @@ def landing_mission_send(mission):
 
 def navigate(center_latlon, camAlt, overlap, zoomLevel, coverage, ids):
     gridspacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
-    global master_num, udp_socket
+    global master_num, udp_socket, origin
     latlng = str(str(center_latlon[0][1]) + "," + str(center_latlon[0][0]))
     data = str(
         "navigate"
@@ -885,7 +874,7 @@ def navigate(center_latlon, camAlt, overlap, zoomLevel, coverage, ids):
     udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
     curve = NavigationGridGenerator(
-        origin=(12.582228, 79.865131),
+        origin=origin,
         center_latitude=center_latlon[0][1],
         center_longitude=center_latlon[0][0],
         num_of_drones=1,
@@ -922,7 +911,10 @@ def send_alts(alts):
 
 
 def splitmission(center_latlon, uavs, gridspace, coverage, featureType):
-    global master_num, udp_socket
+    global master_num, udp_socket, origin
+    center_latlon = [[[float(lon), float(lat)]] for [[lon, lat]] in center_latlon]
+
+    print("centerlatlon", center_latlon)
     for latlon in center_latlon:
         latlon.reverse()
     if featureType == "points":
@@ -941,7 +933,7 @@ def splitmission(center_latlon, uavs, gridspace, coverage, featureType):
         udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
         center_latlon = [coord[0] for coord in center_latlon]
         split = AutoSplitMission(
-            origin=(12.582228, 79.865131),
+            origin=origin,
             center_lat_lons=center_latlon,
             num_of_drones=len(uavs),
             grid_spacing=gridspace,
@@ -974,7 +966,7 @@ def splitmission(center_latlon, uavs, gridspace, coverage, featureType):
 
         planner = PolygonAutoSplit(
             polygon_latlon_list=center_latlon,
-            origin_gps=(12.582228, 79.865131),
+            origin_gps=origin,
             endDistance=500000,
             num_drones=len(uavs),
             grid_spacing=gridspace,
@@ -989,7 +981,7 @@ def splitmission(center_latlon, uavs, gridspace, coverage, featureType):
 
 
 def specificsplit(center_latlon, uavs, gridspace, coverage, featureType):
-    global master_num, udp_socket
+    global master_num, udp_socket, origin
     grid = []
     coverageSpace = []
     for i in range(len(uavs)):
@@ -998,7 +990,7 @@ def specificsplit(center_latlon, uavs, gridspace, coverage, featureType):
     print(center_latlon, uavs, gridspace, coverage)
 
     split = AutoSplitMission(
-        origin=(12.582228, 79.865131),
+        origin=origin,
         center_lat_lons=center_latlon,
         num_of_drones=len(uavs),
         grid_spacing=gridspace,

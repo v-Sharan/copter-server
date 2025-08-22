@@ -854,6 +854,15 @@ class MAVLinkNetwork:
         if uav:
             uav.handle_message_heartbeat(message)
 
+    # def _handle_message_home_position(
+    #     self, message: MAVLinkMessage, *, connection_id: str, address: Any
+    # ):
+    #     print("JJJJjjj")
+    #     uav = self._find_uav_from_message(message, address)
+    #     print(uav)
+    #     if uav:
+    #         uav.handle_message_home_position(message)
+
     def _handle_message_log_data(
         self, message: MAVLinkMessage, *, connection_id: str, address: Any
     ):

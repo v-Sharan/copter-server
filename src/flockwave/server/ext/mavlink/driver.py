@@ -1156,6 +1156,8 @@ class MAVLinkUAV(UAVBase):
     _system_id = 0
     """MAVLink system ID of the drone. Zero if unspecified or unknown."""
 
+    # _home = GPSCoordinate
+
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
 
@@ -1198,7 +1200,7 @@ class MAVLinkUAV(UAVBase):
 
         #: Current global position of the drone
         self._position = GPSCoordinate()
-
+        # self._home = GPSCoordinate()
         #: Scheduled takeoff time of the drone, as a UNIX timestamp, in seconds
         self._scheduled_takeoff_time = None
 
@@ -1769,6 +1771,25 @@ class MAVLinkUAV(UAVBase):
 
         self.update_status(gps=self._gps_fix)
         self.notify_updated()
+
+    # def handle_message_home_position(self, message: MAVLinkMessage):
+    #     """Process the HOME_POSITION message and update UAV state."""
+    #     self._store_message(message)
+    #     print("message", message)
+    #     if abs(message.lat) <= 900000000:
+    #         self._home.lat = message.lat / 1e7
+    #         self._home.lon = message.lon / 1e7
+    #         self._home.amsl = message.alt / 1000.0  # mm → meters
+    #     else:
+    #         self._home.lat = 0
+    #         self._home.lon = 0
+    #         self._home.amsl = 0
+
+    #     print("JJJJ", self._home.lat, self._home.lon)
+
+    #     # Push into your update system
+    #     self.update_status(home=self._home)
+    #     self.notify_updated()
 
     def handle_message_log_data(self, message: MAVLinkMessage):
         self.log_downloader.handle_message_log_data(message)
@@ -2649,7 +2670,7 @@ class MAVLinkUAV(UAVBase):
             # active, critical, emergency, poweroff, termination)
             FlockwaveErrorCode.RETURN_TO_HOME: is_returning_home
             and heartbeat.system_status > MAVState.STANDBY,
-            #FlockwaveErrorCode.LOW_AIRSPEED: airspeed_failure,
+            # FlockwaveErrorCode.LOW_AIRSPEED: airspeed_failure,
         }
 
         # Clear the collected prearm failure messages if the heartbeat and/or
