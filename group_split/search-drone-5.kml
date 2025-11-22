@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document id="1097">
+        <Style id="1100">
+            <LineStyle id="1101">
+                <color>ff0000ff</color>
+                <colorMode>normal</colorMode>
+                <width>3</width>
+            </LineStyle>
+        </Style>
+        <Style id="1104">
+            <IconStyle id="1106">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1107">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1105">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1110">
+            <IconStyle id="1112">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1113">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1111">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1116">
+            <IconStyle id="1118">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1119">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1117">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1122">
+            <IconStyle id="1124">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1125">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1123">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Placemark id="1099">
+            <name>Drone path 5</name>
+            <styleUrl>#1100</styleUrl>
+            <LineString id="1098">
+                <altitudeMode>clampToGround</altitudeMode>
+                <coordinates>80.07413822335026,12.724384486730361,0.0 80.07413822335026,12.727341325122346,0.0 80.07487119493157,12.729897603743197,0.0 80.07487119493157,12.724288741120953,0.0</coordinates>
+            </LineString>
+        </Placemark>
+        <Placemark id="1103">
+            <name>1</name>
+            <styleUrl>#1104</styleUrl>
+            <Point id="1102">
+                <coordinates>80.07413822335026,12.724384486730361,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1109">
+            <name>2</name>
+            <styleUrl>#1110</styleUrl>
+            <Point id="1108">
+                <coordinates>80.07413822335026,12.727341325122346,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1115">
+            <name>3</name>
+            <styleUrl>#1116</styleUrl>
+            <Point id="1114">
+                <coordinates>80.07487119493157,12.729897603743197,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1121">
+            <name>4</name>
+            <styleUrl>#1122</styleUrl>
+            <Point id="1120">
+                <coordinates>80.07487119493157,12.724288741120953,0.0</coordinates>
+            </Point>
+        </Placemark>
+    </Document>
+</kml>

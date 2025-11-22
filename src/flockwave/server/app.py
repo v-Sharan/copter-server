@@ -59,7 +59,7 @@ from .swarm import *
 from flockwave.server.ext.mavlink.automission import AutoMissionManager
 from flockwave.server.ext.mavlink.enums import MAVCommand
 from typing import List
-
+import subprocess
 
 __all__ = ("app",)
 
@@ -370,7 +370,7 @@ class SkybrushServer(DaemonApp):
         Returns:
             the DEV-UNSUB message with the paths that the client was
             unsubscribed from, along with error messages for the paths that the
-            client was not unsubscribed from
+            client was not unsu bscribed from
         """
         manager = self.device_tree_subscriptions
         response = self.message_hub.create_response_or_notification(
@@ -453,16 +453,24 @@ class SkybrushServer(DaemonApp):
         )
 
         for uav_id in uav_ids:
+            # print(uav_id, "gggggggg")
             uav = self.find_uav_by_id(uav_id, response)
+            # print(uav, "KKKKKKk")
+            if uav:
+                if (
+                    hasattr(self, "uavs_home")
+                    and self.uavs_home is not None
+                    and uav_id in self.uavs_home
+                ):
+                    # print("After home setup")
+                    # print(self.uavs_home)
+                    [uav.status.distance, uav.status.bearing] = distance_bearing(
+                        homeLattitude=self.uavs_home[uav_id][0],
+                        homeLongitude=self.uavs_home[uav_id][1],
+                        destinationLattitude=uav.status.position.lat,
+                        destinationLongitude=uav.status.position.lon,
+                    )
 
-            # if uav:
-            #     if hasattr(self, "uavs_home") and self.uavs_home is not None:
-            #         [uav.status.distance, uav.status.bearing] = distance_bearing(
-            #             homeLattitude=self.uavs_home[uav_id][0],
-            #             homeLongitude=self.uavs_home[uav_id][1],
-            #             destinationLattitude=uav.status.position.lat,
-            #             destinationLongitude=uav.status.position.lon,
-            #         )
             statuses[uav_id] = uav.status
 
         return response
@@ -1135,6 +1143,7 @@ class SkybrushServer(DaemonApp):
             body={}, in_response_to=message
         )
         parameters = dict(message.body)
+        print("parameters", parameters)
         msg = parameters["message"].lower()
         ids = parameters.pop("ids", ())
         uavid = parameters.pop("uavid")
@@ -1302,15 +1311,16 @@ class SkybrushServer(DaemonApp):
 
         # Process the body
         parameters = dict(message.body)
-        print("param", parameters)
+        # print("param", parameters)
         result = ""
         msg = parameters["message"].lower()
-        print("mgs", msg)
+        # print("mgs", msg)
         if msg == "master":
             result = master(int(parameters.get("id", "")))
 
         if msg == "offline":
             print("OFFline!!!!!")
+            
             result = master(0)
 
         if msg == "coverage":
@@ -1330,8 +1340,26 @@ class SkybrushServer(DaemonApp):
             await sleep(1)
             result = home_socket()
 
-        if msg == "share_data":
-            result = share_data_func()
+        if msg == "home_distance":
+
+            ids = parameters.pop("id", ())  # parameters["ids"]
+            uav = self.find_uav_by_id(ids)
+            if not uav:
+                result = "No vehicle Connected"
+                return response
+            homedistance, homebearing = distance_bearing(
+                homeLattitude=self.uavs_home[ids][0],
+                homeLongitude=self.uavs_home[ids][1],
+                destinationLattitude=uav.status.position.lat,
+                destinationLongitude=uav.status.position.lon,
+            )
+            result = True
+            response.body["home_dist"] = [homedistance, homebearing]
+
+        if msg == "home goto":
+            stop_socket()
+            await sleep(1)
+            result = homegoto_socket()
 
         if msg == "disperse":
             stop_socket()
@@ -1379,8 +1407,8 @@ class SkybrushServer(DaemonApp):
             print(data)
             newalts = changeAlts(data)
 
-        if msg == "same":  # TODO
-            result = same_alt_socket(parameters["same_alt"])
+        # if msg == "same":  # TODO
+        #     result = same_alt_socket(parameters["same_alt"])
 
         if msg == "clear_csv":
             result = clear_csv()
@@ -1403,18 +1431,6 @@ class SkybrushServer(DaemonApp):
                 )
             else:
                 result = goal_socket(parameters.get("coords"))
-
-        # if msg == "land":
-        #     stop_socket()
-        #     await sleep(1)
-        #     result = land_socket()
-
-        if msg == "plot":
-            result = airport_selection(
-                parameters["location"].capitalize()
-                + str("_")
-                + parameters["runwayName"].lower()
-            )
 
         if msg == "log":
             result = fetch_file_content(get_log_file_path())
@@ -1562,6 +1578,36 @@ class SkybrushServer(DaemonApp):
             result = True
             response.body["angle"] = self.bearing
 
+        if msg == "fence":
+            from .YamlCreation import FenceToYAML
+
+            stop_socket()
+            await sleep(1)
+            print("FENCEEEE")
+            coords = []
+            label = []
+            features = parameters.get("features")
+            featureType = features[0]["type"]
+
+            for feature in features:
+                points = feature["points"]
+                label_value = feature.get("label", None)
+                label.append(label_value)
+                points_array = []
+                for point in points:
+                    point.reverse()
+                    points_array.append(point)
+                coords.append(points_array)
+            print("Coordinates", coords, label, len(coords))
+            fence_yaml = FenceToYAML(fence_coordinates=coords, labels=label)
+            fence_yaml.process_fences()  # generate XY points
+            generated_origin, yaml_text = fence_yaml.generate_yaml(
+                r"D:\\nithya\\copter\\swarm_tasks\\envs\\worlds\\rectangles.yaml"
+            )
+            # print("YAML TEXT", yaml_text)
+            result = generate_origin(generated_origin)
+            result = coords
+
         if msg == "start_capture":
             selectedIds = parameters.get("id")
             print("selectedIds", selectedIds)
@@ -1669,16 +1715,22 @@ class SkybrushServer(DaemonApp):
         message_type = parameters.pop("type")
         uav_ids: Sequence[str] = parameters.pop("ids", ())
         transport: Any = parameters.get("transport")
-        print(uav_ids, "uav_ids")
-        self.uavs_home = {}
-        for uav_id in uav_ids:
 
-            uav = self.find_uav_by_id(uav_id, response)
-            if uav:
-                self.uavs_home[uav_id] = [
-                    uav.status.position.lat,
-                    uav.status.position.lon,
-                ]
+        if message_type == "UAV-MOTOR":
+
+            if not hasattr(self, "uavs_home"):
+                self.uavs_home = {}
+            print(uav_ids, "uav_ids hoooome")
+
+            for uav_id in uav_ids:
+
+                uav = self.find_uav_by_id(uav_id, response)
+                if uav:
+                    self.uavs_home[uav_id] = [
+                        uav.status.position.lat,
+                        uav.status.position.lon,
+                    ]
+            print(self.uavs_home)
 
         if message_type == "UAV-TAKEOFF":
             from .socket.globalVariable import update_Takeoff_Alt

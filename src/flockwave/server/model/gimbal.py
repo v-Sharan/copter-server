@@ -28,7 +28,7 @@ class Gimbal:
         self.tlon = 0
         self.connected = False
         self.position = position
-        self.bearing = 60
+        self.bearing = 0
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         packet = bytearray(
             [
@@ -54,12 +54,10 @@ class Gimbal:
     def calculate_coords(self: Self) -> None:
         while self.connected:
             self.socket.sendall(self.bytePacket)
-            print("Calculate Coords")
             if not self.is_connected():
                 print("Not Connected")
                 break
             data, address = self.socket.recvfrom(1024)
-            print(data)
             self.get_latlon(data)
 
     def is_connected(self: Self) -> bool:
@@ -75,7 +73,7 @@ class Gimbal:
         try:
             self.socket.connect((self.host, self.port))
             time.sleep(1)
-            print("Connected to gimbal")
+            print("Connected to gimbal {}:{}".format(self.host, self.port))
             self.connected = True
             self.run_in_background_thread()
         except socket.error as e:
@@ -117,9 +115,9 @@ class Gimbal:
         # print("response_hex", response_hex, len(response_hex))
         if len(response_hex) in [94, 108]:
             tlat, tlon, yaw = self.extract_imu_angle(response_hex)
-            print(tlat, tlon, yaw)
             self.tlat = tlat
             self.tlon = tlon
+            print(tlat, tlon, yaw)
 
     def get_target_coords(self: Self) -> tuple[float, float]:
         """
@@ -136,6 +134,9 @@ class Gimbal:
                 self.position.lat, self.position.lon, self.tlat, self.tlon
             )
             # print(self.tlat, self.tlon)
+            # print(
+            # self.bearing, self.position.lat, self.position.lon, self.tlat, self.tlon
+            # )
             time.sleep(0.5)  # Reduce the frequency of recalculations
 
     @lru_cache(maxsize=None)

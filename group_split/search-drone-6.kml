@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document id="1127">
+        <Style id="1130">
+            <LineStyle id="1131">
+                <color>ff0000ff</color>
+                <colorMode>normal</colorMode>
+                <width>3</width>
+            </LineStyle>
+        </Style>
+        <Style id="1134">
+            <IconStyle id="1136">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1137">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1135">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1140">
+            <IconStyle id="1142">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1143">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1141">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1146">
+            <IconStyle id="1148">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1149">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1147">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1152">
+            <IconStyle id="1154">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1155">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1153">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1158">
+            <IconStyle id="1160">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1161">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1159">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Style id="1164">
+            <IconStyle id="1166">
+                <color>ff00ffff</color>
+                <colorMode>normal</colorMode>
+                <scale>1.0</scale>
+                <heading>0</heading>
+                <Icon id="1167">
+                    <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+                </Icon>
+            </IconStyle>
+            <LabelStyle id="1165">
+                <color>ffff0000</color>
+                <colorMode>normal</colorMode>
+                <scale>1</scale>
+            </LabelStyle>
+        </Style>
+        <Placemark id="1129">
+            <name>Drone path 6</name>
+            <styleUrl>#1130</styleUrl>
+            <LineString id="1128">
+                <altitudeMode>clampToGround</altitudeMode>
+                <coordinates>80.07540979711783,12.72421838533109,0.0 80.07540979711783,12.729931050167668,0.0 80.07614276869914,12.729976566653232,0.0 80.07614276869914,12.724122639721683,0.0 80.07687574028047,12.724026894112274,0.0 80.07687574028047,12.730022083138795,0.0</coordinates>
+            </LineString>
+        </Placemark>
+        <Placemark id="1133">
+            <name>1</name>
+            <styleUrl>#1134</styleUrl>
+            <Point id="1132">
+                <coordinates>80.07540979711783,12.72421838533109,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1139">
+            <name>2</name>
+            <styleUrl>#1140</styleUrl>
+            <Point id="1138">
+                <coordinates>80.07540979711783,12.729931050167668,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1145">
+            <name>3</name>
+            <styleUrl>#1146</styleUrl>
+            <Point id="1144">
+                <coordinates>80.07614276869914,12.729976566653232,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1151">
+            <name>4</name>
+            <styleUrl>#1152</styleUrl>
+            <Point id="1150">
+                <coordinates>80.07614276869914,12.724122639721683,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1157">
+            <name>5</name>
+            <styleUrl>#1158</styleUrl>
+            <Point id="1156">
+                <coordinates>80.07687574028047,12.724026894112274,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="1163">
+            <name>6</name>
+            <styleUrl>#1164</styleUrl>
+            <Point id="1162">
+                <coordinates>80.07687574028047,12.730022083138795,0.0</coordinates>
+            </Point>
+        </Placemark>
+    </Document>
+</kml>

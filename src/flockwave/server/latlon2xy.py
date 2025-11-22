@@ -45,7 +45,7 @@ def distance_bearing(
     ) * math.cos(rlon2 - rlon1)
     bearing = math.atan2(y, x)  # bearing in radians
     bearingDegrees = bearing * (180 / math.pi)
-    out = [distance, bearingDegrees]
+    out = [int(distance), bearingDegrees]
     return out
 
 

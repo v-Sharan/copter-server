@@ -406,7 +406,7 @@ class PolygonSpecificSplit:
                 pnt.style.iconstyle.color = simplekml.Color.yellow
                 pnt.style.iconstyle.scale = 1.0
 
-            kml_path = os.path.join(self.output_dir, f"drone{drone_id}.kml")
+            kml_path = os.path.join(self.output_dir, f"search-drone-{drone_id}.kml")
             kml.save(kml_path)
             print(f"✅ Saved KML for drone {drone_id} to {kml_path}")
 

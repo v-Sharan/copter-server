@@ -150,7 +150,7 @@ class AutoSplitMission:
             # print("csv_data", i, csv_data, len(csv_data[0]))
             path.extend(csv_data)
             start += drones_array[i]
-        print("length of path", len(path))
+        print("length of path", len(path), path)
         return path
 
 
