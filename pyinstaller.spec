@@ -34,6 +34,7 @@ sys.modules["FixTk"] = None
 # Extra modules to import
 extra_modules = set([
     "flockwave.server.config"
+    "flockwave"
 ])
 
 # Modules to exclude

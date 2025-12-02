@@ -321,9 +321,9 @@ def takeoff_socket(alt):
 def search_socket(points, camAlt, overlap, zoomLevel, coverage, ids):
     global udp_socket, master_num, origin
     print("Searching........", points, len(points))
-    points = [[float(lon), float(lat)] for lon, lat in points]
-    for num in points:
-        num.reverse()
+    # points = [[float(lon), float(lat)] for lon, lat in points]
+    # for num in points:
+    #     num.reverse()
     gridspacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
     print("gridspacing", gridspacing)
     if len(points) == 1:
@@ -470,9 +470,9 @@ def specific_bot_goal_socket(drone_num, goal_num):
 def goal_socket(goal_num):
     global master_num, udp_socket
     print("***Group goal*****!!!!!")
-    goal_num = [[float(lon), float(lat)] for lon, lat in goal_num]
-    for num in goal_num:
-        num.reverse()
+    # goal_num = [[float(lon), float(lat)] for lon, lat in goal_num]
+    # for num in goal_num:
+    #     num.reverse()
     data = str("goal" + "_" + str(goal_num))
     print("d", data)
     udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])

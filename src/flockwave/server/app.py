@@ -1313,6 +1313,16 @@ class SkybrushServer(DaemonApp):
         parameters = dict(message.body)
         # print("param", parameters)
         result = ""
+        outer_boundary = []
+
+        def set_outer_boundary(boundary):
+            global outer_boundary
+            outer_boundary = boundary
+
+        def get_outer_boundary():
+            global outer_boundary
+            return outer_boundary
+
         msg = parameters["message"].lower()
         # print("mgs", msg)
         if msg == "master":
@@ -1320,7 +1330,6 @@ class SkybrushServer(DaemonApp):
 
         if msg == "offline":
             print("OFFline!!!!!")
-            
             result = master(0)
 
         if msg == "coverage":
@@ -1366,6 +1375,8 @@ class SkybrushServer(DaemonApp):
             result = disperse_socket()
 
         if msg == "search":
+            from .geofence_validator import FenceValidator
+
             stop_socket()
             await sleep(1)
             points = parameters.get("coords")
@@ -1375,13 +1386,19 @@ class SkybrushServer(DaemonApp):
             coverage = parameters.get("coverage")
             ids = parameters.get("ids")
             print("search ids", ids, len(ids))
-            # ids = list(app.object_registry.ids_by_type(UAV))
-            path, time_min = search_socket(
-                points, camAlt, overlap, zoomLevel, coverage, ids
-            )
-            print("path", len(path))
-            result = path
-            response.body["time"] = time_min
+            points = [[float(lon), float(lat)] for lon, lat in points]
+            for num in points:
+                num.reverse()
+            validator = FenceValidator(get_outer_boundary(), label="outer")
+            if validator.are_points_all_inside(points):
+                path, time_min = search_socket(
+                    points, camAlt, overlap, zoomLevel, coverage, ids
+                )
+                print("path", len(path))
+                result = path
+                response.body["time"] = time_min
+            else:
+                result = False
 
         if msg == "aggregate":
             stop_socket()
@@ -1422,15 +1439,24 @@ class SkybrushServer(DaemonApp):
             result = specific_bot_goal_socket(parameters["ids"], parameters["goal"])
 
         if msg == "goal":
+            from .geofence_validator import FenceValidator
+
             stop_socket()
             await sleep(1)
-            print(parameters["ids"], len(parameters["ids"]), "!!!")
-            if len(parameters["ids"]) == 1:
-                result = specific_bot_goal_socket(
-                    parameters["ids"], parameters["coords"]
-                )
+            goal_num = [
+                [float(lon), float(lat)] for lon, lat in (parameters.get("coords"))
+            ]
+            for num in goal_num:
+                num.reverse()
+            validator = FenceValidator(get_outer_boundary(), label="outer")
+            if validator.are_points_all_inside(goal_num):
+                print(parameters["ids"], len(parameters["ids"]), "!!!")
+                if len(parameters["ids"]) == 1:
+                    result = specific_bot_goal_socket(parameters["ids"], goal_num)
+                else:
+                    result = goal_socket(goal_num)
             else:
-                result = goal_socket(parameters.get("coords"))
+                result = False
 
         if msg == "log":
             result = fetch_file_content(get_log_file_path())
@@ -1458,6 +1484,8 @@ class SkybrushServer(DaemonApp):
             result = land_socket()
 
         if msg == "navigate":
+            from .geofence_validator import FenceValidator
+
             stop_socket()
             await sleep(1)
             center_latlon = parameters.get("coords")
@@ -1466,10 +1494,17 @@ class SkybrushServer(DaemonApp):
             zoomLevel = parameters.get("zoomLevel")
             coverage = parameters.get("coverage")
             ids = parameters.get("ids")
-            path = navigate(center_latlon, camAlt, overlap, zoomLevel, coverage, ids)
-            result = path
-            # response.body["time"] = time
-
+            nav_coords = [
+                [float(lat), float(lon)] for lon, lat in (parameters.get("coords"))
+            ]
+            validator = FenceValidator(get_outer_boundary(), label="outer")
+            if validator.are_points_all_inside(nav_coords):
+                path = navigate(
+                    center_latlon, camAlt, overlap, zoomLevel, coverage, ids
+                )
+                result = path
+            else:
+                result = False
         if msg == "loiter":
             stop_socket()
             await sleep(1)
@@ -1501,6 +1536,8 @@ class SkybrushServer(DaemonApp):
             result = await landing_main(landingMission, len(selectedIds), uavs)
 
         if msg == "groupsplit":
+            from .geofence_validator import FenceValidator
+
             stop_socket()
             await sleep(1)
             coords = []
@@ -1520,18 +1557,29 @@ class SkybrushServer(DaemonApp):
             overlap = parameters.get("overlap")
             zoomLevel = parameters.get("zoomLevel")
             coverage = parameters.get("coverage")
+            if featureType == "points":
+                center_latlon = [[[float(lon), float(lat)]] for [[lon, lat]] in coords]
+            for latlon in center_latlon:
+                latlon.reverse()
+            print("centerlatlon", center_latlon)
 
-            from .swarm import compute_grid_spacing
+            clean_points = [coords[0] for coords in center_latlon]
+            print("clean_points", clean_points)
+            validator = FenceValidator(get_outer_boundary(), label="outer")
+            if validator.are_points_all_inside(clean_points):
+                from .swarm import compute_grid_spacing
 
-            gridSpacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
-            print("gridSpacing!!!!!!!!", gridSpacing)
-            result = splitmission(
-                center_latlon=coords,
-                uavs=selectedIds,
-                coverage=coverage,
-                gridspace=gridSpacing,
-                featureType=featureType,
-            )
+                gridSpacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
+                print("gridSpacing!!!!!!!!", gridSpacing)
+                result = splitmission(
+                    center_latlon=center_latlon,
+                    uavs=selectedIds,
+                    coverage=coverage,
+                    gridspace=gridSpacing,
+                    featureType=featureType,
+                )
+            else:
+                result = False
 
         if msg == "spificsplit":
             stop_socket()
@@ -1599,6 +1647,9 @@ class SkybrushServer(DaemonApp):
                     points_array.append(point)
                 coords.append(points_array)
             print("Coordinates", coords, label, len(coords))
+            # outer_index = label.index("outer")
+            # outer_boundary = coords[label.index("outer")]
+            set_outer_boundary(coords[label.index("outer")])
             fence_yaml = FenceToYAML(fence_coordinates=coords, labels=label)
             fence_yaml.process_fences()  # generate XY points
             generated_origin, yaml_text = fence_yaml.generate_yaml(
