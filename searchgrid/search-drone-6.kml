@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+    <Document id="595">
+        <Style id="598">
+            <LineStyle id="599">
+                <color>ff0000ff</color>
+                <colorMode>normal</colorMode>
+                <width>2</width>
+            </LineStyle>
+        </Style>
+        <Placemark id="597">
+            <styleUrl>#598</styleUrl>
+            <LineString id="596">
+                <altitudeMode>clampToGround</altitudeMode>
+                <coordinates>80.0461305289893,12.92944289697628,0.0 80.0507381733033,12.929442856314271,0.0</coordinates>
+            </LineString>
+        </Placemark>
+        <Placemark id="601">
+            <name>1</name>
+            <Point id="600">
+                <coordinates>80.0461305289893,12.92944289697628,0.0</coordinates>
+            </Point>
+        </Placemark>
+        <Placemark id="603">
+            <name>2</name>
+            <Point id="602">
+                <coordinates>80.0507381733033,12.929442856314271,0.0</coordinates>
+            </Point>
+        </Placemark>
+    </Document>
+</kml>

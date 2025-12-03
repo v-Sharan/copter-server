@@ -27,7 +27,7 @@ from typing import (
 from flockwave.channels import MessageChannel
 from flockwave.connections import Connection
 
-from .types import Disposer
+from .type import Disposer
 
 
 __all__ = ("BROADCAST", "CommunicationManager")

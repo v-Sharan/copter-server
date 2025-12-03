@@ -10,7 +10,7 @@ from typing import Iterator, Optional
 from flockwave.server.model import default_id_generator
 from flockwave.server.registries.base import RegistryBase
 from flockwave.server.registries.objects import ObjectRegistryProxy
-from flockwave.server.types import Disposer
+from flockwave.server.type import Disposer
 
 from .model import LocalPositioningSystem, LocalPositioningSystemType
 

@@ -22,7 +22,7 @@ import logging
 from flockwave.ext.manager import ExtensionManager
 from flockwave.networking import can_bind_to_tcp_address, format_socket_address
 from flockwave.server.ports import get_port_number_for_service
-from flockwave.server.types import Disposer
+from flockwave.server.type import Disposer
 from flockwave.server.utils.packaging import is_oxidized
 
 from .routing import RoutingMiddleware

@@ -52,7 +52,7 @@ from .model import (
     FlockwaveResponse,
 )
 from .registries import ChannelTypeRegistry, ClientRegistry
-from .types import Disposer
+from .type import Disposer
 
 # Legacy imports for compatibility reasons. We can get rid of these when the
 # "dock" extension has migrated to the new location in .message_handlers

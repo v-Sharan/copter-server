@@ -4,10 +4,12 @@ from importlib import import_module
 from pathlib import Path
 
 from PyInstaller import __version__ as pyinstaller_version
-from PyInstaller.archive.pyz_crypto import PyiBlockCipher
+#from PyInstaller.archive.pyz_crypto import PyiBlockCipher
 
 import os
 import sys
+
+sys.setrecursionlimit(sys.getrecursionlimit() * 10)
 
 key = os.environ.get("PYINSTALLER_KEY")
 single_file = True
@@ -26,15 +28,18 @@ else:
         raise RuntimeError("encryption not supported with PyInstaller <4.0")
 
 # Create the encryption cipher
-cipher = PyiBlockCipher(key) if key else None
+#cipher = PyiBlockCipher(key) if key else None
 
 # Prevent TkInter to be included in the bundle, step 1
 sys.modules["FixTk"] = None
 
 # Extra modules to import
 extra_modules = set([
-    "flockwave.server.config"
-    "flockwave"
+    "flockwave.server.config",
+    "scipy._lib.array_api_compat.numpy.fft",
+    "scipy._lib.array_api_compat.numpy.linalg",
+    "scipy._lib.array_api_compat.numpy.random",
+    "flockwave.spec"
 ])
 
 # Modules to exclude
@@ -77,12 +82,13 @@ extra_modules.update(
 private_modules = set()
 for module_name in sorted(extra_modules):
     if is_extension_module(module_name):
-        try:
+        is_private = False
+        '''try:
             imported_module = import_module(module_name)
             if hasattr(imported_module, "private"):
                 is_private = bool(imported_module.private)
         except ImportError:
-            is_private = False
+            is_private = False'''
         if is_private:
             private_modules.add(module_name)
 extra_modules -= private_modules
@@ -100,6 +106,7 @@ while changed:
     for module_name in sorted(extra_modules):
         if is_extension_module(module_name):
             try:
+                raise ImportError
                 imported_module = import_module(module_name)
                 if hasattr(imported_module, "get_dependencies"):
                     deps = imported_module.get_dependencies()
@@ -137,9 +144,10 @@ a = Analysis(
     excludes=exclude_modules,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
-    cipher=cipher
+    #cipher=cipher
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=cipher)
+pyz = PYZ(a.pure, a.zipped_data)
+#, cipher=cipher)
 
 if single_file:
     exe = EXE(

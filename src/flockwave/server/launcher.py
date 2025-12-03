@@ -9,9 +9,9 @@ import trio
 import warnings
 from typing import Optional
 
-import flockwave.logger
+# import flockwave.logger
 
-# from flockwave import logger
+from flockwave import logger
 
 from .logger import log
 from .utils.packaging import is_packaged

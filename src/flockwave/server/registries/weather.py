@@ -9,7 +9,7 @@ from functools import partial
 from typing import Iterator, Optional
 
 from flockwave.server.model.weather import WeatherProvider
-from flockwave.server.types import Disposer
+from flockwave.server.type import Disposer
 
 from .base import RegistryBase
 
