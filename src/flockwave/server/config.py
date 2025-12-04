@@ -95,6 +95,7 @@ EXTENSIONS = {
     "socketio": {},
     "ssdp": {},
     "system_clock": {},
+    "map_cache": {},
     "tcp": {},
     "udp": {},
     "virtual_uavs": {

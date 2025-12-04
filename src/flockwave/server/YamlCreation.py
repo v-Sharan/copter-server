@@ -18,6 +18,7 @@ class FenceToYAML:
         self.origin_shift_m = origin_shift_m
         self.origin = None
         self.obstacles_list = []
+        print(fence_coordinates)
 
     # ----------------------------------------------------
     # Compute destination lat/lon given distance and bearing
@@ -117,13 +118,14 @@ class FenceToYAML:
     # Process all fences and generate obstacles list
     # ----------------------------------------------------
     def process_fences(self):
+        print("Outerrrrrrrrrrrr")
         if self.origin is None:
             self.compute_origin()
 
         outer_index = self.labels.index("outer")
         outer_fence = self.fence_coordinates[outer_index]
         outer_polygon = self.generate_outer_simple(outer_fence)
-
+        print("Outer Polygon", outer_polygon)
         inner_polygon = outer_fence
         all_points = inner_polygon + outer_polygon
 
@@ -152,13 +154,13 @@ class FenceToYAML:
             all_points[len(inner_polygon)],
             all_points[0],
         ]
-
+        print(top_boundary, right_boundary, bottom_boundary, left_boundary)
         # Convert boundaries to XY
         self.obstacles_list = [
-            self.convert_to_xy_array("Top Boundary", top_boundary),
             self.convert_to_xy_array("Right Boundary", right_boundary),
             self.convert_to_xy_array("Bottom Boundary", bottom_boundary),
             self.convert_to_xy_array("Left Boundary", left_boundary),
+            self.convert_to_xy_array("Top Boundary", top_boundary),
         ]
 
         # Convert inner fences

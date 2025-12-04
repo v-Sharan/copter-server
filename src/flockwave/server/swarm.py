@@ -300,7 +300,7 @@ def select_plot(filename):
 def disperse_socket():
     global udp_socket, master_num
     print("Disperse!!!!!!")
-    # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # data = str("disperse" + "," + str(points[0][1]) + "," + str(points[0][0]))
     data = "disperse"
     udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 

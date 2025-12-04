@@ -1651,7 +1651,8 @@ class SkybrushServer(DaemonApp):
             # outer_boundary = coords[label.index("outer")]
             set_outer_boundary(coords[label.index("outer")])
             fence_yaml = FenceToYAML(fence_coordinates=coords, labels=label)
-            fence_yaml.process_fences()  # generate XY points
+            obstacle_list = fence_yaml.process_fences()  # generate XY points
+            print(obstacle_list)
             generated_origin, yaml_text = fence_yaml.generate_yaml(
                 r"D:\\nithya\\copter\\swarm_tasks\\envs\\worlds\\rectangles.yaml"
             )
