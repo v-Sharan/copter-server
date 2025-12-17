@@ -360,7 +360,7 @@ class PolygonSearchGrid:
         return base_dir
 
     def gps_to_image_coords(self, gps_list):
-        print("gps_list", gps_list, gps_list[0])
+        # print("gps_list", gps_list, gps_list[0])
         # If gps_list contains floats instead of pairs, raise a clear error
         if len(gps_list) == 0:
             return []
@@ -474,14 +474,14 @@ class PolygonSearchGrid:
             # csv_path = os.path.join(self.output_dir, f"d{i+1}.csv")
 
             kml.save(kml_path)
-            print(f"Saved KML for drone {i+1} to {kml_path}")
+            # print(f"Saved KML for drone {i+1} to {kml_path}")
 
             # with open(csv_path, 'w', newline='') as csvfile:
             #     writer = csv.writer(csvfile)
             #     # writer.writerow(['latitude', 'longitude'])
             #     writer.writerows(csv_data)
             # print(f"Saved CSV for drone {i+1} to {csv_path}")
-        print(self.path, "@@@@@")
+        # print(self.path, "@@@@@")
         return self.path
 
 

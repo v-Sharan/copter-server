@@ -1,203 +1,203 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
-    <Document id="935">
-        <Style id="938">
-            <LineStyle id="939">
+    <Document id="1067">
+        <Style id="1070">
+            <LineStyle id="1071">
                 <color>ff0000ff</color>
                 <colorMode>normal</colorMode>
                 <width>3</width>
             </LineStyle>
         </Style>
-        <Style id="942">
-            <IconStyle id="944">
+        <Style id="1074">
+            <IconStyle id="1076">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="945">
+                <Icon id="1077">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="943">
+            <LabelStyle id="1075">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Style id="948">
-            <IconStyle id="950">
+        <Style id="1080">
+            <IconStyle id="1082">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="951">
+                <Icon id="1083">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="949">
+            <LabelStyle id="1081">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Style id="954">
-            <IconStyle id="956">
+        <Style id="1086">
+            <IconStyle id="1088">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="957">
+                <Icon id="1089">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="955">
+            <LabelStyle id="1087">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Style id="960">
-            <IconStyle id="962">
+        <Style id="1092">
+            <IconStyle id="1094">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="963">
+                <Icon id="1095">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="961">
+            <LabelStyle id="1093">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Style id="966">
-            <IconStyle id="968">
+        <Style id="1098">
+            <IconStyle id="1100">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="969">
+                <Icon id="1101">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="967">
+            <LabelStyle id="1099">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Style id="972">
-            <IconStyle id="974">
+        <Style id="1104">
+            <IconStyle id="1106">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="975">
+                <Icon id="1107">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="973">
+            <LabelStyle id="1105">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Style id="978">
-            <IconStyle id="980">
+        <Style id="1110">
+            <IconStyle id="1112">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="981">
+                <Icon id="1113">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="979">
+            <LabelStyle id="1111">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Style id="984">
-            <IconStyle id="986">
+        <Style id="1116">
+            <IconStyle id="1118">
                 <color>ff00ffff</color>
                 <colorMode>normal</colorMode>
                 <scale>1.0</scale>
                 <heading>0</heading>
-                <Icon id="987">
+                <Icon id="1119">
                     <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
                 </Icon>
             </IconStyle>
-            <LabelStyle id="985">
+            <LabelStyle id="1117">
                 <color>ffff0000</color>
                 <colorMode>normal</colorMode>
                 <scale>1</scale>
             </LabelStyle>
         </Style>
-        <Placemark id="937">
+        <Placemark id="1069">
             <name>Drone path 2</name>
-            <styleUrl>#938</styleUrl>
-            <LineString id="936">
+            <styleUrl>#1070</styleUrl>
+            <LineString id="1068">
                 <altitudeMode>clampToGround</altitudeMode>
-                <coordinates>80.0889291966816,12.721061651462229,0.0 80.0889291966816,12.72694769435287,0.0 80.08966216826292,12.726887755567397,0.0 80.08966216826292,12.720984739152613,0.0 80.09039513984425,12.720907826842994,0.0 80.09039513984425,12.726827816781926,0.0 80.09112811142558,12.726767877996455,0.0 80.09112811142558,12.720830914533376,0.0</coordinates>
+                <coordinates>80.04909331544636,12.927522925423306,0.0 80.04909331544636,12.930712525424761,0.0 80.04961955145346,12.930721527423298,0.0 80.04961955145346,12.927567979974114,0.0 80.05014578746056,12.927613034524922,0.0 80.05014578746056,12.930730529421833,0.0 80.05067202346767,12.93073953142037,0.0 80.05067202346767,12.92765808907573,0.0</coordinates>
             </LineString>
         </Placemark>
-        <Placemark id="941">
+        <Placemark id="1073">
             <name>1</name>
-            <styleUrl>#942</styleUrl>
-            <Point id="940">
-                <coordinates>80.0889291966816,12.721061651462229,0.0</coordinates>
+            <styleUrl>#1074</styleUrl>
+            <Point id="1072">
+                <coordinates>80.04909331544636,12.927522925423306,0.0</coordinates>
             </Point>
         </Placemark>
-        <Placemark id="947">
+        <Placemark id="1079">
             <name>2</name>
-            <styleUrl>#948</styleUrl>
-            <Point id="946">
-                <coordinates>80.0889291966816,12.72694769435287,0.0</coordinates>
+            <styleUrl>#1080</styleUrl>
+            <Point id="1078">
+                <coordinates>80.04909331544636,12.930712525424761,0.0</coordinates>
             </Point>
         </Placemark>
-        <Placemark id="953">
+        <Placemark id="1085">
             <name>3</name>
-            <styleUrl>#954</styleUrl>
-            <Point id="952">
-                <coordinates>80.08966216826292,12.726887755567397,0.0</coordinates>
+            <styleUrl>#1086</styleUrl>
+            <Point id="1084">
+                <coordinates>80.04961955145346,12.930721527423298,0.0</coordinates>
             </Point>
         </Placemark>
-        <Placemark id="959">
+        <Placemark id="1091">
             <name>4</name>
-            <styleUrl>#960</styleUrl>
-            <Point id="958">
-                <coordinates>80.08966216826292,12.720984739152613,0.0</coordinates>
+            <styleUrl>#1092</styleUrl>
+            <Point id="1090">
+                <coordinates>80.04961955145346,12.927567979974114,0.0</coordinates>
             </Point>
         </Placemark>
-        <Placemark id="965">
+        <Placemark id="1097">
             <name>5</name>
-            <styleUrl>#966</styleUrl>
-            <Point id="964">
-                <coordinates>80.09039513984425,12.720907826842994,0.0</coordinates>
+            <styleUrl>#1098</styleUrl>
+            <Point id="1096">
+                <coordinates>80.05014578746056,12.927613034524922,0.0</coordinates>
             </Point>
         </Placemark>
-        <Placemark id="971">
+        <Placemark id="1103">
             <name>6</name>
-            <styleUrl>#972</styleUrl>
-            <Point id="970">
-                <coordinates>80.09039513984425,12.726827816781926,0.0</coordinates>
+            <styleUrl>#1104</styleUrl>
+            <Point id="1102">
+                <coordinates>80.05014578746056,12.930730529421833,0.0</coordinates>
             </Point>
         </Placemark>
-        <Placemark id="977">
+        <Placemark id="1109">
             <name>7</name>
-            <styleUrl>#978</styleUrl>
-            <Point id="976">
-                <coordinates>80.09112811142558,12.726767877996455,0.0</coordinates>
+            <styleUrl>#1110</styleUrl>
+            <Point id="1108">
+                <coordinates>80.05067202346767,12.93073953142037,0.0</coordinates>
             </Point>
         </Placemark>
-        <Placemark id="983">
+        <Placemark id="1115">
             <name>8</name>
-            <styleUrl>#984</styleUrl>
-            <Point id="982">
-                <coordinates>80.09112811142558,12.720830914533376,0.0</coordinates>
+            <styleUrl>#1116</styleUrl>
+            <Point id="1114">
+                <coordinates>80.05067202346767,12.92765808907573,0.0</coordinates>
             </Point>
         </Placemark>
     </Document>

@@ -48,9 +48,9 @@ class Gimbal:
         )
         self.bytePacket = bytes(packet)
 
-        threading.Thread(
-            target=self.connect_to_gimbal,
-        ).start()
+        # threading.Thread(
+        #     target=self.connect_to_gimbal,
+        # ).start()
 
     def calculate_coords(self) -> None:
         while self.connected:

@@ -385,17 +385,17 @@ class PolygonAutoSplit:
 
             kml_path = os.path.join(self.output_dir, f"search-drone-{drone_id}.kml")
             kml.save(kml_path)
-            print(f"✅ Saved KML for drone {drone_id} to {kml_path}")
+            # print(f"✅ Saved KML for drone {drone_id} to {kml_path}")
             self.path.append(path1)
             # Save CSV with (lat, lon)
-            csv_path = os.path.join(self.output_dir, f"grid_{drone_id}.csv")
-            with open(csv_path, "w", newline="") as f:
-                writer = csv.writer(f)
-                # writer.writerow(['lat', 'lon'])
-                for lat, lon in gps_coords:
-                    x, y = geoToCart(self.origin_gps, 500000, [lat, lon])
-                    writer.writerow([x / 2, y / 2])
-            print(f"✅ Saved CSV for drone {drone_id} to {csv_path}")
+            # csv_path = os.path.join(self.output_dir, f"grid_{drone_id}.csv")
+            # with open(csv_path, "w", newline="") as f:
+            #     writer = csv.writer(f)
+            #     # writer.writerow(['lat', 'lon'])
+            #     for lat, lon in gps_coords:
+            #         x, y = geoToCart(self.origin_gps, 500000, [lat, lon])
+            #         writer.writerow([x / 2, y / 2])
+            # print(f"✅ Saved CSV for drone {drone_id} to {csv_path}")
 
             drone_id += 1
 

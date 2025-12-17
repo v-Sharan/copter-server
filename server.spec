@@ -15,7 +15,7 @@ from PyInstaller.utils.hooks import collect_submodules
 # -------------------------------------------------------------------------
 sys.setrecursionlimit(sys.getrecursionlimit() * 10)
 
-name = "XAG"
+name = "operation_server"
 single_file = False    # Produce ONEDIR directory-style build
 
 root_dir = Path.cwd()

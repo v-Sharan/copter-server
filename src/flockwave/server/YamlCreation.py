@@ -1,5 +1,6 @@
 import math
 from scipy import interpolate
+import os, sys
 
 
 class FenceToYAML:
@@ -8,8 +9,8 @@ class FenceToYAML:
         fence_coordinates,
         labels,
         endDistance=500000,
-        buffer_distance=100,
-        origin_shift_m=3000,
+        buffer_distance=10,
+        origin_shift_m=0,
     ):
         self.fence_coordinates = fence_coordinates
         self.labels = labels
@@ -175,7 +176,7 @@ class FenceToYAML:
     # ----------------------------------------------------
     # Compute map size and shift to positive quadrant
     # ----------------------------------------------------
-    def compute_size_and_shift(self, padding=1000):
+    def compute_size_and_shift(self, padding=1):
         all_points = [p for boundary in self.obstacles_list for p in boundary]
         xs = [p[0] for p in all_points]
         ys = [p[1] for p in all_points]
@@ -188,19 +189,44 @@ class FenceToYAML:
 
         shifted_obstacles_list = []
         for boundary in self.obstacles_list:
-            shifted_boundary = [
-                [x - min_x + padding / 2, y - min_y + padding / 2] for x, y in boundary
-            ]
+            shifted_boundary = [[x - min_x / 2, y - min_y / 2] for x, y in boundary]
             shifted_obstacles_list.append(shifted_boundary)
 
         return size_x, size_y, shifted_obstacles_list
 
+    @staticmethod
+    def get_documents_folder():
+        documents = os.path.join(os.path.expanduser("~"), "Documents")
+        swarm_folder = os.path.join(documents, "swarm_env")
+        os.makedirs(swarm_folder, exist_ok=True)
+        return swarm_folder
+
     # ----------------------------------------------------
     # Generate YAML file
     # ----------------------------------------------------
-    def generate_yaml(
-        self, filename=r"D:\\nithya\\copter\\swarm_tasks\\envs\\worlds\\rectangles.yaml"
-    ):
+    def generate_yaml(self, filename=None):
+        # import os
+
+        # # If user does not give a base_path → use AppData/Roaming
+        # if base_path is None:
+        #     base_path = os.path.join(os.environ["APPDATA"])
+
+        # # Create swarm_env folder inside base_path
+        # swarm_folder = os.path.join(base_path, "swarm_env")
+        # os.makedirs(swarm_folder, exist_ok=True)
+
+        # # Final YAML file path
+        # filename = os.path.join(swarm_folder, "rectangles.yaml")
+
+        # # Create or overwrite YAML
+        # if not os.path.exists(filename):
+        #     open(filename, "w").close()
+        # If filename not provided, save to Documents/swarm_env
+        if filename is None:
+            base_folder = self.get_documents_folder()
+            filename = os.path.join(base_folder, "rectangles.yaml")
+
+        print(f"YAML file will be saved to: {filename}")
         size_x, size_y, shifted_obstacles_list = self.compute_size_and_shift()
         yaml_lines = []
         yaml_lines.append("name: Rectangles")

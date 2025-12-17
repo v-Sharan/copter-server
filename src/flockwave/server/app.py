@@ -60,6 +60,7 @@ from flockwave.server.ext.mavlink.automission import AutoMissionManager
 from flockwave.server.ext.mavlink.enums import MAVCommand
 from typing import List
 import subprocess
+import netifaces, wmi
 
 __all__ = ("app",)
 
@@ -457,19 +458,28 @@ class SkybrushServer(DaemonApp):
             uav = self.find_uav_by_id(uav_id, response)
             # print(uav, "KKKKKKk")
             if uav:
-                if (
-                    hasattr(self, "uavs_home")
-                    and self.uavs_home is not None
-                    and uav_id in self.uavs_home
-                ):
-                    # print("After home setup")
-                    # print(self.uavs_home)
+                uav.status.SwarmChainLink = SwarmChainList[int(uav_id)]
+                if not hasattr(self, "uavs_home"):
+                    self.uavs_home = {}
+
+                if uav_id not in self.uavs_home:
+                    self.uavs_home.setdefault(uav_id, [0, 0, "NotSet"])
+
+                if self.uavs_home[uav_id][2] == "NotSet":
+
+                    self.uavs_home[uav_id][0] = uav.status.position.lat
+                    self.uavs_home[uav_id][1] = uav.status.position.lon
+                    self.uavs_home[uav_id][2] = "NotArm"
+
+                if self.uavs_home[uav_id][2] == "Armed":
                     [uav.status.distance, uav.status.bearing] = distance_bearing(
                         homeLattitude=self.uavs_home[uav_id][0],
                         homeLongitude=self.uavs_home[uav_id][1],
                         destinationLattitude=uav.status.position.lat,
                         destinationLongitude=uav.status.position.lon,
                     )
+                if self.uavs_home[uav_id][2] == "NotArm":
+                    uav.status.distance, uav.status.bearing = 0, 0
 
             statuses[uav_id] = uav.status
 
@@ -1112,7 +1122,7 @@ class SkybrushServer(DaemonApp):
                     camLocation=camLoc, targetLocation=tarLoc, yaw=yaw
                 )
             )
-            await sleep(1)
+            await sleep(2)
 
     async def camera_handler(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
@@ -1300,6 +1310,42 @@ class SkybrushServer(DaemonApp):
 
         return response
 
+    def get_wifi_ip(self, iface_map):
+        interfaces = netifaces.interfaces()
+        # print(interfaces)
+        for iface in netifaces.interfaces():
+            try:
+                # print(iface,iface_map[iface])
+                # if iface in iface_map:
+                adapter = iface_map[iface]
+                # print(adapter)
+                addrs = netifaces.ifaddresses(iface)
+                # print(addrs)
+                ipv4_info = addrs.get(netifaces.AF_INET, [])
+                for addr in ipv4_info:
+                    ip = addr.get("addr")
+                    if ip and (
+                        adapter == "Ethernet"
+                        or adapter == "Wi-Fi"
+                        or iface == "eth0"
+                        or iface == "ensp20"
+                        or iface == "wlan0"
+                    ):
+                        return ip
+            except Exception as e:
+                print(f"Error on interface {iface}: {e}")
+        return None
+
+    def get_interface_mapping(self):
+        c = wmi.WMI()
+        # print(c.Win32_NetworkAdapter()[1])
+        mappings = {}
+        for nic in c.Win32_NetworkAdapter():
+            # print(nic)
+            if nic.GUID:
+                mappings[nic.GUID.upper()] = nic.NetConnectionID or nic.Name
+        return self.get_wifi_ip(mappings)
+
     async def socket_response(
         self, message: FlockwaveMessage, sender: Client, *, id_property: str = "id"
     ) -> FlockwaveMessage:
@@ -1311,7 +1357,7 @@ class SkybrushServer(DaemonApp):
 
         # Process the body
         parameters = dict(message.body)
-        # print("param", parameters)
+        print("param", parameters)
         result = ""
         outer_boundary = []
 
@@ -1346,7 +1392,7 @@ class SkybrushServer(DaemonApp):
 
         if msg == "home":
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             result = home_socket()
 
         if msg == "home_distance":
@@ -1356,18 +1402,27 @@ class SkybrushServer(DaemonApp):
             if not uav:
                 result = "No vehicle Connected"
                 return response
-            homedistance, homebearing = distance_bearing(
-                homeLattitude=self.uavs_home[ids][0],
-                homeLongitude=self.uavs_home[ids][1],
-                destinationLattitude=uav.status.position.lat,
-                destinationLongitude=uav.status.position.lon,
-            )
+            if (
+                not hasattr(self, "uavs_home")
+                and self.uavs_home is not None
+                and ids in self.uavs_home
+            ):
+                homedistance, homebearing = 0, 0
+
+            else:
+                print(self.uavs_home)
+                homedistance, homebearing = distance_bearing(
+                    homeLattitude=self.uavs_home[ids][0],
+                    homeLongitude=self.uavs_home[ids][1],
+                    destinationLattitude=uav.status.position.lat,
+                    destinationLongitude=uav.status.position.lon,
+                )
             result = True
             response.body["home_dist"] = [homedistance, homebearing]
 
         if msg == "home goto":
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             result = homegoto_socket()
 
         if msg == "disperse":
@@ -1375,10 +1430,13 @@ class SkybrushServer(DaemonApp):
             result = disperse_socket()
 
         if msg == "search":
-            from .geofence_validator import FenceValidator
+            from .geofence_validator import (
+                Fence,
+                SearchAreaValidator,
+            )
 
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             points = parameters.get("coords")
             camAlt = parameters.get("camAlt")
             overlap = parameters.get("overlap")
@@ -1389,8 +1447,11 @@ class SkybrushServer(DaemonApp):
             points = [[float(lon), float(lat)] for lon, lat in points]
             for num in points:
                 num.reverse()
-            validator = FenceValidator(get_outer_boundary(), label="outer")
-            if validator.are_points_all_inside(points):
+            fence = Fence(get_outer_boundary(), label="outer")
+            # validator = FenceValidator(get_outer_boundary(), label="outer")
+            search_validator = SearchAreaValidator(fence)
+            if search_validator.are_points_with_coverage_inside(points, coverage):
+                # if validator.are_points_all_inside(points):
                 path, time_min = search_socket(
                     points, camAlt, overlap, zoomLevel, coverage, ids
                 )
@@ -1407,7 +1468,7 @@ class SkybrushServer(DaemonApp):
 
         if msg == "different":  # TODO
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             result = different_alt_socket(
                 parameters.get("alt"), parameters.get("alt_diff")
             )
@@ -1435,24 +1496,27 @@ class SkybrushServer(DaemonApp):
 
         if msg == "specific_bot_goal":
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             result = specific_bot_goal_socket(parameters["ids"], parameters["goal"])
 
         if msg == "goal":
-            from .geofence_validator import FenceValidator
+            from .geofence_validator import Fence, GoalFenceValidator
 
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             goal_num = [
                 [float(lon), float(lat)] for lon, lat in (parameters.get("coords"))
             ]
             for num in goal_num:
                 num.reverse()
-            validator = FenceValidator(get_outer_boundary(), label="outer")
-            if validator.are_points_all_inside(goal_num):
+
+            fence = Fence(get_outer_boundary(), label="outer")
+            goal_validator = GoalFenceValidator(fence)
+            if goal_validator.are_points_all_inside(goal_num):
                 print(parameters["ids"], len(parameters["ids"]), "!!!")
-                if len(parameters["ids"]) == 1:
+                if len(parameters["ids"]) >= 1:
                     result = specific_bot_goal_socket(parameters["ids"], goal_num)
+
                 else:
                     result = goal_socket(goal_num)
             else:
@@ -1462,32 +1526,39 @@ class SkybrushServer(DaemonApp):
             result = fetch_file_content(get_log_file_path())
 
         if msg == "remove_link":
-            stop_socket()
-            await sleep(1)
             uav = int(parameters.get("id"))
+            SwarmChainList[int(uav)] = False
+            print(SwarmChainList)
+            stop_socket()
+            await sleep(2)
+
             result = mavlink_remove(uav)
             result = True
 
         if msg == "add_link":
-            stop_socket()
-            await sleep(1)
             uav = int(parameters.get("id"))
+            SwarmChainList[int(uav)] = True
+            print(SwarmChainList)
+            stop_socket()
+            await sleep(2)
+
             result = mavlink_add(uav)
 
         if msg == "remove_uav":
+
             result = bot_remove(int(parameters.get("ids")[0]))
 
         if msg == "landing":
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             # result = landing_mission_send(parameters.get("mission"))
             result = land_socket()
 
         if msg == "navigate":
-            from .geofence_validator import FenceValidator
+            from .geofence_validator import Fence, SearchAreaValidator
 
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             center_latlon = parameters.get("coords")
             camAlt = parameters.get("camAlt")
             overlap = parameters.get("overlap")
@@ -1497,8 +1568,10 @@ class SkybrushServer(DaemonApp):
             nav_coords = [
                 [float(lat), float(lon)] for lon, lat in (parameters.get("coords"))
             ]
-            validator = FenceValidator(get_outer_boundary(), label="outer")
-            if validator.are_points_all_inside(nav_coords):
+            fence = Fence(get_outer_boundary(), label="outer")
+            search_validator = SearchAreaValidator(fence)
+            if search_validator.are_points_with_coverage_inside(nav_coords, coverage):
+
                 path = navigate(
                     center_latlon, camAlt, overlap, zoomLevel, coverage, ids
                 )
@@ -1507,7 +1580,7 @@ class SkybrushServer(DaemonApp):
                 result = False
         if msg == "loiter":
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             center_latlon = parameters.get("coords")
             direction = (
                 1 if parameters.get("direction", "").lower().startswith("a") else -1
@@ -1523,7 +1596,7 @@ class SkybrushServer(DaemonApp):
             from .socket.globalVariable import getAlts
 
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             landingMission = parameters.get("landing")
             selectedIds = parameters.get("ids")
             uavs = {}
@@ -1536,10 +1609,10 @@ class SkybrushServer(DaemonApp):
             result = await landing_main(landingMission, len(selectedIds), uavs)
 
         if msg == "groupsplit":
-            from .geofence_validator import FenceValidator
+            from .geofence_validator import Fence, SearchAreaValidator
 
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             coords = []
             features = parameters.get("features")
             featureType = features[0]["type"]
@@ -1552,21 +1625,26 @@ class SkybrushServer(DaemonApp):
                 coords.append(points_array)
             print(len(coords))
             selectedIds = parameters.get("ids")
-            log.warning("features: {}".format(coords))
+            # log.warning("features: {}".format(coords))
             camAlt = parameters.get("camAlt")
             overlap = parameters.get("overlap")
             zoomLevel = parameters.get("zoomLevel")
             coverage = parameters.get("coverage")
             if featureType == "points":
                 center_latlon = [[[float(lon), float(lat)]] for [[lon, lat]] in coords]
+            else:
+                center_latlon = coords
             for latlon in center_latlon:
                 latlon.reverse()
             print("centerlatlon", center_latlon)
 
             clean_points = [coords[0] for coords in center_latlon]
             print("clean_points", clean_points)
-            validator = FenceValidator(get_outer_boundary(), label="outer")
-            if validator.are_points_all_inside(clean_points):
+            # validator = FenceValidator(get_outer_boundary(), label="outer")
+            # if validator.are_points_all_inside(clean_points):
+            fence = Fence(get_outer_boundary(), label="outer")
+            search_validator = SearchAreaValidator(fence)
+            if search_validator.are_points_with_coverage_inside(clean_points, coverage):
                 from .swarm import compute_grid_spacing
 
                 gridSpacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
@@ -1582,32 +1660,35 @@ class SkybrushServer(DaemonApp):
                 result = False
 
         if msg == "spificsplit":
+            # from .geofence_validator import Fence, SearchAreaValidator
+
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             featureType = None
             group = parameters.get("groups")
             coverage = parameters.get("coverage")
             camAlt = parameters.get("camAlt")
             overlap = parameters.get("overlap")
             zoomLevel = parameters.get("zoomLevel")
-            print("camAlt, zoomLevel, overlap", group, camAlt, zoomLevel, overlap)
-            # gridSpacing = parameters.get("gridSpacing")
             sam = dict(group)
             latlon = []
             uavs = []
-            print(group)
             for key, value in sam.items():
                 keys = key.split(",")
                 latlon.append([float(keys[0]), float(keys[1])])
                 for i in range(len(value)):
                     value[i] = int(value[i])
                 uavs.append(value)
+            # fence = Fence(get_outer_boundary(), label="outer")
+            # search_validator = SearchAreaValidator(fence)
+            # if search_validator.are_points_with_coverage_inside(latlon, coverage):
+            # print("%%%%%%%")
             from .swarm import compute_grid_spacing
 
             gridSpacing = compute_grid_spacing(camAlt, zoomLevel, overlap)
-            print("gridSpacing@@@@@", gridSpacing)
-            path = specificsplit(latlon, uavs, gridSpacing, coverage, featureType)
-            result = path
+            result = specificsplit(latlon, uavs, gridSpacing, coverage, featureType)
+            # else:
+            #     result = False
 
         if msg == "antenna_az":
             print("########AZZZZZZZZ####")
@@ -1628,10 +1709,21 @@ class SkybrushServer(DaemonApp):
 
         if msg == "fence":
             from .YamlCreation import FenceToYAML
+            from .swarm_autoscript import run_server_exe, is_server_running
+
+            if not hasattr(self, "ip"):
+                self.ip = self.get_interface_mapping()
+
+            if self.ip == None:
+                self.ip = "127.0.0.1"
+
+            sim_enabler = False if not hasattr(self, "sim_enbled") else self.sim_enbled
 
             stop_socket()
-            await sleep(1)
+            await sleep(2)
             print("FENCEEEE")
+
+            get_ip(self.ip)
             coords = []
             label = []
             features = parameters.get("features")
@@ -1653,12 +1745,59 @@ class SkybrushServer(DaemonApp):
             fence_yaml = FenceToYAML(fence_coordinates=coords, labels=label)
             obstacle_list = fence_yaml.process_fences()  # generate XY points
             print(obstacle_list)
-            generated_origin, yaml_text = fence_yaml.generate_yaml(
-                r"D:\\nithya\\copter\\swarm_tasks\\envs\\worlds\\rectangles.yaml"
-            )
+            generated_origin, yaml_text = fence_yaml.generate_yaml()
             # print("YAML TEXT", yaml_text)
             result = generate_origin(generated_origin)
+            if not is_server_running("copter_swarm.exe"):
+                run_server_exe(server_address=self.ip, sim_enable=sim_enabler)
+
             result = coords
+
+        if msg == "startsimulation":
+            from .swarm_autoscript import is_server_running
+            from .simulation_autoscript import simulation_exe
+
+            if not hasattr(self, "ip"):
+                self.ip = self.get_interface_mapping()
+
+            if self.ip == None:
+                self.ip = "127.0.0.1"
+            print(" sim server ip", self.ip)
+
+            lon, lat = parameters.get("coords")[0]
+            count = parameters.get("simNoUAVs")
+            spacing = parameters.get("simSpacing")
+            simrow = parameters.get("simRow")
+            simcol = parameters.get("simColumn")
+            simpattern = parameters.get("simPattern")
+
+            self.sim_enbled = True
+            if not is_server_running("sim_launcher.exe"):
+                simulation_exe(
+                    count=str(count),
+                    spacing=str(spacing),
+                    home_lat=lat,
+                    home_lon=lon,
+                    server_address=self.ip,
+                    row=simrow,
+                    col=simcol,
+                    pattern=simpattern,
+                )
+                print("Started Simulation Successfully")
+                result = True
+            else:
+                print("Already Stimulation Running")
+                result = False
+
+        if msg == "endsimulation":
+
+            from .simulation_autoscript import stop_simulation
+
+            self.sim_enbled = False
+
+            print("Closed Simulation Successfully")
+            stop_simulation()
+            result = True
 
         if msg == "start_capture":
             selectedIds = parameters.get("id")
@@ -1770,10 +1909,6 @@ class SkybrushServer(DaemonApp):
 
         if message_type == "UAV-MOTOR":
 
-            if not hasattr(self, "uavs_home"):
-                self.uavs_home = {}
-            print(uav_ids, "uav_ids hoooome")
-
             for uav_id in uav_ids:
 
                 uav = self.find_uav_by_id(uav_id, response)
@@ -1781,8 +1916,8 @@ class SkybrushServer(DaemonApp):
                     self.uavs_home[uav_id] = [
                         uav.status.position.lat,
                         uav.status.position.lon,
+                        "Armed",
                     ]
-            print(self.uavs_home)
 
         if message_type == "UAV-TAKEOFF":
             from .socket.globalVariable import update_Takeoff_Alt

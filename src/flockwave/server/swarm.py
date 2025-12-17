@@ -4,7 +4,8 @@ from .search import SearchGridGenerator, PolygonSearchGrid
 from .navigate import NavigationGridGenerator
 from .AutoMission import AutoSplitMission
 from .latlon2xy import distance_bearing
-from .swarm_autoscript import TerminalManager
+
+# from .swarm_autoscript import TerminalManager
 
 # from .SpecificSplitMission import SpecificSplitMission
 # from .time import TimeCalculation
@@ -86,11 +87,6 @@ udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 addersses = {
     0: {"control": ("192.168.6.220", 12002), "data": ("192.168.6.220", 12008)},
-    1: {"control": ("192.168.6.151", 12002), "data": ("192.168.6.151", 12008)},
-    2: {"control": ("192.168.6.154", 12002), "data": ("192.168.6.154", 12008)},
-    3: {"control": ("192.168.6.153", 12002), "data": ("192.168.6.153", 12008)},
-    4: {"control": ("192.168.6.154", 12002), "data": ("192.168.6.154", 12008)},
-    5: {"control": ("192.168.6.155", 12002), "data": ("192.168.6.155", 12008)},
 }
 # origin = (30.351921, 76.852759)  # chandigarh
 origin = (12.58228, 79.865131)  # hanumanthapuram
@@ -456,11 +452,11 @@ def return_socket():
 
 def specific_bot_goal_socket(drone_num, goal_num):
     global master_num, udp_socket
-    print("$$$##Specific_bot_goal###")
+    print("$$$##Specific_bot_goal###", drone_num)
     goal_num = [[float(lon), float(lat)] for lon, lat in goal_num]
     for num in goal_num:
         num.reverse()
-    data = "specificbotgoal" + "_" + str(drone_num[0]) + "_" + str(goal_num)
+    data = "specificbotgoal" + "_" + str(drone_num) + "_" + str(goal_num)
     print("d", data, addersses[int(master_num)]["data"])
     udp_socket.sendto(data.encode(), addersses[int(master_num)]["data"])
 
@@ -480,6 +476,14 @@ def goal_socket(goal_num):
     return True
 
 
+def get_ip(ip):
+    global addersses
+
+    addersses = {
+        0: {"control": (str(ip), 12002), "data": (str(ip), 12008)},
+    }
+
+
 def master(master_number):
     global master_num, udp_socket
     master_num = int(master_number)
@@ -491,12 +495,6 @@ def master(master_number):
             print(f"✅ Sent to UAV {uav_id}: {ports['control']}")
         except Exception as e:
             print(f"❌ Error sending to UAV {uav_id}: {e}")
-    tm = TerminalManager(
-        working_dir=r"D:\nithya",
-        venv_path=r"D:\nithya\myenv\Scripts",
-        script_path=r"copter\swarm_tasks\Examples\basic_tasks\copter_swarm_modified.py",
-    )
-    tm.restart_terminal()
 
     return True
 
@@ -559,6 +557,9 @@ def landing_mission_send(mission):
 
     data = str("home,{}".format(mission))
     return True
+
+
+SwarmChainList = [True, True, True, True, True, True, True, True, True]
 
 
 def navigate(center_latlon, camAlt, overlap, zoomLevel, coverage, ids):

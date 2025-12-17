@@ -7,6 +7,8 @@
 *.pyo
 *.swp
 .eggs/
+logs/
+eeprom.bin
 build/
 dist/
 doc/build/
@@ -36,6 +38,6 @@ text_extraction_python3.py
 plane_aerobatics.lua
 
 tiles/
-
+terrain/
 func.py
 test.py

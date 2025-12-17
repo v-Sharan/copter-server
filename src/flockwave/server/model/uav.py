@@ -108,6 +108,13 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
             "minimum": 0.0,
             "maximum": 360.0,
         }
+        SwarmChainLink = {
+            "title": "Swarm UAV Link",
+            "description": "Identify the UAV is in Swarm or not",
+            "type": "bool",
+            "minimum": False,
+            "maximum": True,
+        }
         schema = get_complex_object_schema("uavStatusInfo")
         schema["properties"]["airspeed"] = airspeed
         schema["properties"]["gimbalHeading"] = gimbalHeading
@@ -116,6 +123,7 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
         schema["properties"]["wind_direction"] = wind_direction
         schema["properties"]["bearing"] = bearingFromGCS
         schema["properties"]["distance"] = distanceFromGCS
+        schema["properties"]["SwarmChainLink"] = SwarmChainLink
         mappers = {"heading": scaled_by(10), "debug": as_base64}
 
     debug: bytes
@@ -141,6 +149,7 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
     wind_speed: float
     bearing: float
     distance: float
+    SwarmChainLink: bool
     # home: GPSCoordinate
 
     def __init__(
@@ -177,6 +186,7 @@ class UAVStatusInfo(TimestampMixin, metaclass=ModelMeta):
         self.wind_speed = 0.0
         self.bearing = 0.0
         self.distance = 0.0
+        self.SwarmChainLink = True
         # self.home = GPSCoordinate()
 
     @property
@@ -265,6 +275,7 @@ class UAVBase(UAV):
         self._gimabl = Gimbal(
             host=_gimbal_ip.get(id), port=2000, position=self._status.position
         )
+
         self._initialize_device_tree_node(self._device_tree_node)
 
     @property

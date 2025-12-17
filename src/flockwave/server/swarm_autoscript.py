@@ -1,53 +1,56 @@
 import os
+import sys
 import subprocess
 import time
 
+import psutil
 
-class TerminalManager:
-    def __init__(self, working_dir, venv_path, script_path):
-        self.working_dir = working_dir
-        self.venv_path = venv_path
-        self.script_path = script_path
-        self.process_name = "cmd.exe"
 
-    def _kill_existing_terminal(self):
+def is_server_running(exe_name):
+    """Check if a process with the given exe_name is running."""
+    for proc in psutil.process_iter(["name"]):
         try:
-            output = subprocess.check_output(
-                f'tasklist /FI "IMAGENAME eq {self.process_name}"', shell=True
-            ).decode()
-            if self.process_name in output:
-                print(f"{self.process_name} is running, killing it...")
-                subprocess.call(f"taskkill /F /IM {self.process_name}", shell=True)
-                time.sleep(1)
-        except Exception as e:
-            print("Error checking/killing process:", e)
-
-    def _build_command(self):
-        """Build the full command safely using os.path"""
-        script_name = os.path.basename(self.script_path)  # Just the script filename
-        script_dir = os.path.dirname(self.script_path)  # Directory of the script
-
-        cmd = (
-            f"cd /d {self.working_dir} && "
-            f"call {self.venv_path}\\activate && "
-            f"cd {script_dir} && "
-            f"python {script_name} && "
-            "pause"
-        )
-        return cmd
-
-    def restart_terminal(self):
-        self._kill_existing_terminal()
-        cmd = self._build_command()
-        subprocess.Popen(f'start cmd /k "{cmd}"', shell=True)
-        print("New terminal opened.")
+            if proc.info["name"] == exe_name:
+                return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return False
 
 
-# Example usage:
-if __name__ == "__main__":
-    tm = TerminalManager(
-        working_dir=r"D:\nithya",
-        venv_path=r"D:\nithya\myenv\Scripts",
-        script_path=r"copter\swarm_tasks\Examples\basic_tasks\copter_swarm_modified.py",
+def run_server_exe(sim_enable=False, server_address="127.0.0.1"):
+
+    # Path where master.exe is running
+    if getattr(sys, "frozen", False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Path to swarm.exe
+    sim_flag = "--sim-enable" if sim_enable else ""
+
+    server_exe = os.path.join(
+        base_dir,
+        "../swarm_server",
+        "copter_swarm.exe",
     )
-    tm.restart_terminal()
+
+    print("Looking for:", server_exe)
+
+    if not os.path.exists(server_exe):
+        print("ERROR: swarm.exe not found!")
+        flag_exe = False
+        pass
+    else:
+        flag_exe = True
+        cmdlist = [server_exe, "--server-address", server_address, sim_flag]
+
+    if flag_exe:
+        print("Starting Swarm Server...")
+        subprocess.Popen(
+            cmdlist, creationflags=subprocess.CREATE_NEW_CONSOLE
+        )  # run silently
+        print("Server started!")
+
+
+# if __name__ == "__main__":
+#     run_server_exe()
